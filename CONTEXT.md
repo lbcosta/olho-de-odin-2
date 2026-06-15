@@ -4,6 +4,10 @@ Aplicação local-first auxiliar para o mercado de Ragnarok Online que consome A
 
 ## Language
 
+**Lojas Ativas**:
+Lojas no jogo que estão ativamente vendendo um Item no exato momento da busca. Exclui lojas inativas ou histórico de transações passadas.
+_Avoid_: Lista de lojas, lojas, mercado
+
 **Item**:
 Representação de um item do jogo Ragnarok Online cadastrado no banco de dados local da aplicação, identificado pelo seu `itemId`.
 _Avoid_: Artigo, mercadoria
