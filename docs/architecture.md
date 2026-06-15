@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS items (
     profile_id INTEGER NOT NULL,
     item_id INTEGER NOT NULL, -- Universal Ragnarok Item ID
     item_name TEXT NOT NULL,
-    acquisition_cost INTEGER DEFAULT NULL, -- Null if farmed/no cost (disables Piso de Lucratividade)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
@@ -127,7 +126,6 @@ The application must compute the following metrics on the dashboard using a comb
 - **Undercutting:** Recommend price as $P_{\text{lowest}} - 1 \text{ Zeny}$, ignoring active stores that only have a stock of 1 unit.
 - **Premium Positioning:** If the cheapest active competitor has low stock ($\text{itemCnt} < 5\% \times \text{Mean}(\text{itemCnt}_{10\text{-day}})$), recommend matching the price of the 2nd or 3rd cheapest competitor.
 - **Flipping (Troll Protection):** If the minimum active price is $> 30\%$ below the 3-day historical average price ($P_{3\text{-day}}$), recommend **not selling** or **buying out the cheap competitor** (Flipping).
-- **Piso de Lucratividade Enforcement:** If a recommended strategy price falls below `acquisition_cost` (when defined), clamp the recommendation to `acquisition_cost` or show a warning.
 
 ---
 

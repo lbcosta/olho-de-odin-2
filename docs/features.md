@@ -39,7 +39,6 @@
 | Média Ponderada Real | Calcula-se dando peso ao volume. | Revela o preço real que o mercado aceita pagar, ignorando distorções de preços extremos. |
 | Spread Atual | Maior itemPrice (End 1) - Menor itemPrice (End 1). | Margem de oportunidade. Spreads grandes indicam que é possível comprar barato e vender caro. |
 | Pressão da Concorrência | Total itemCnt (End 1) / Média itemCnt dos últimos 7 dias (End 3). | Se o resultado for maior que 1, o mercado está saturado hoje (melhor segurar o item). |
-| Piso de Lucratividade | Compara o itemPrice sugerido com o custo de farm/compra. | Garante que o jogador não tome prejuízo ao entrar em guerras de preços. |
 
 Sendo a Média Ponderada Real:
 

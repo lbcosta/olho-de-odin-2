@@ -30,10 +30,6 @@ _Avoid_: Margem de lucro bruta
 Razão entre a quantidade total de itens à venda hoje nas lojas ativas e a quantidade média diária vendida histórica (últimos 7 dias). Valores acima de 1 indicam saturação.
 _Avoid_: Índice de saturação
 
-**Piso de Lucratividade**:
-Preço limite inferior opcional, configurado pelo usuário com base no custo de aquisição de um item. Quando definido, garante que as estratégias de preço sugeridas não resultem em prejuízo. Se não for definido (ex: itens obtidos por farm), as regras de margem mínima são desativadas.
-_Avoid_: Custo mínimo, margem zero
-
 ### Estratégias de Venda
 
 **Undercutting**:
