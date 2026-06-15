@@ -23,3 +23,4 @@ Para contornar os limites estritos de requisição da API GnJoy (Rate Limit de 1
    - Refinos
    - Localização Exata
    - Ação de cópia: Botão "click to copy" (que formata a localização e a copia para a área de transferência do usuário no formato prático `/navi map_name x/y`).
+   - **Cache de Localização (ssi)**: Quando as coordenadas de uma loja são reveladas sob demanda, o App copia o comando para o clipboard e paralelamente salva em um cache local SQLite indexado pela chave única da loja (`ssi`). Isso evita bater repetidamente no restrito Rate Limit da API caso o usuário clique em copiar diversas vezes na mesma sessão.

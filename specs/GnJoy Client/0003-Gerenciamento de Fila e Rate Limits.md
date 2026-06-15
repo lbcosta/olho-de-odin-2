@@ -2,7 +2,7 @@
 
 ## Restrição de Consumo (Rate Limit)
 A GNJOY possui restrições severas. Para evitar banimentos ou bloqueios, **o Client deve SEMPRE fazer no máximo 1 requisição a cada 3 segundos (3000ms) por padrão**. 
-Todos os fluxos do Olho de Odin 2 usarão uma fila de controle global (`RequestQueueManager`) que garante esse comportamento estrito para todo e qualquer tráfego HTTP.
+Todos os fluxos do Olho de Odin 2 usarão uma fila de controle global (`RequestQueueManager`), hospedada exclusivamente no **Main Process do Electron**, que garante esse comportamento estrito para todo e qualquer tráfego HTTP da aplicação.
 
 ## Regras de Fila
 - Requisições (sejam buscas principais, lazy-loading de itens/lojas, ou extrações automáticas) entram obrigatoriamente nesta fila de processamento síncrono.

@@ -14,6 +14,9 @@ Estes alertas são gerados automaticamente baseados no cruzamento das Métricas 
 - **Volatilidade (Unstable Market)**:
   - **Condição**: A diferença entre o `minItemPrice` e `maxItemPrice` do histórico no mesmo dia supera **30%**.
   - **Interpretação**: Preços caóticos. Risco alto de encalhar estoques a preços equivocados.
+- **Quedas Bruscas (Crash Alert)**:
+  - **Condição**: O sistema verifica o histórico recente. Se o preço médio do último dia disponível caiu mais de **30%** e o volume de vendas caiu mais de **50%** (ambos em relação à média dos três dias imediatamente anteriores).
+  - **Interpretação**: Alerta vermelho de despejo de inventário repentino (Dump) ou manipulação predatória.
 
 ## 2. Estratégias Sugeridas (Precificação Ativa)
 Se o usuário deseja vender um item, o sistema recomendará uma das ações abaixo:

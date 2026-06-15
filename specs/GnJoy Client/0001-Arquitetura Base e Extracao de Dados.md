@@ -17,5 +17,5 @@ Para receber o JSON embutido na árvore RSC (ao invés de pesados arquivos HTML 
 O hash necessário para as requisições POST é um identificador que muda a cada atualização do site da desenvolvedora. 
 Para resolver esse problema:
 1. O Client realiza o **GET inicial** de busca.
-2. No corpo da resposta RSC, ele busca e extrai os identificadores de Server Action presentes (Hashes alfanuméricos ou IDs curtos associados aos callbacks de UI).
-3. O Client persiste essa chave temporariamente na sessão e a injeta como o valor do header `Next-Action` nas consultas subsequentes de detalhamento (Lazy Loading).
+2. No corpo da resposta RSC, ele isola as linhas pelo seu prefixo numérico (ex: `10:` para resultados). O parser **deleta o prefixo** (tudo até o primeiro dois-pontos) e executa um `JSON.parse` nativo no restante da linha. **É expressamente proibido usar Regex** para extrair chaves, pois caracteres de lojas (vírgulas, aspas) quebram a lógica.
+3. O Client persiste a chave de Server Action `Next-Action` extraída do JSON e a injeta nas consultas subsequentes de detalhamento (Lazy Loading).

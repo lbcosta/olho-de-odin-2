@@ -4,8 +4,8 @@
 Este documento define as regras de negócio para a criação e manutenção de múltiplos perfis de usuários locais.
 
 ## Dados do Perfil
-O Olho de Odin 2 opera exclusivamente através de um sistema de Perfis persistidos em um banco de dados local. 
-A troca de perfis permite que jogadores com múltiplas contas gerenciem diferentes nichos de mercado de forma isolada.
+O Olho de Odin 2 opera exclusivamente através de um sistema de Perfis persistidos em um banco de dados local unificado em **SQLite** (arquivo `olhodeodin.db`).
+Todos os dados sensíveis e listagens da Watchlist são mapeados no banco através de uma chave estrangeira (`profile_id`). A troca de perfis permite gerenciar múltiplos nichos.
 
 O esquema básico de um Perfil contém:
 - **ID Interno**
