@@ -12,5 +12,9 @@ O usuário deve visualizar a tela de detalhes do Item com as seguintes divisões
 ## Informações do Item (Canto Superior Esquerdo)
 - **Imagem**: O ícone oficial do item (buscado via `databaseImgPath`).
 - **Nome do Item**: O nome oficial conforme retornado pela busca.
-- **Código de Item**: O ID oficial do item (padrão de 5 dígitos).
-- **Ação Rápida**: Um botão interativo de "Adicionar/Remover da Watchlist" para facilitar o monitoramento ativo.
+- **Tipo do Item**: Categoria técnica oficial (buscada via `databaseType`, ex: Consumível, Carta, Equipamento).
+- **Código de Item**: O ID oficial do item numérico.
+- **Última Sincronização (`updated_at`)**: Exibe o horário exato da última extração de dados bem-sucedida, deixando explícito o status de estase se o App estiver em modo Offline.
+- **Ações Rápidas**: 
+  - Um botão interativo de "Adicionar/Remover da Watchlist".
+  - Um botão de "Sincronizar Agora" para forçar uma chamada ao `RequestQueueManager` e atualizar os caches locais do item.

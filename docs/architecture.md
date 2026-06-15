@@ -1,175 +1,76 @@
-# AI Agent Development Specification - Olho de Odin 2
+# Olho de Odin 2 - Especificação Arquitetural Central
 
-This document details the architectural, database, API, and computational requirements for Olho de Odin 2. It is designed to allow any AI software engineer agent to start and implement this application with zero ambiguity.
-
----
-
-## 1. Architectural Overview & Stack
-
-- **Framework:** Electron (HTML/CSS/JS frontend + Node.js main process backend).
-- **Target OS:** Windows (builds to a standalone `.exe` installer or portable executable).
-- **Database:** SQLite (single file database named `olhodeodin.db` located in the application's local app data folder).
-- **Glossary & Terminology:** All developers must adhere to the terms defined in [CONTEXT.md](file:///home/leonardo/github/lbcosta/olho-de-odin-2/CONTEXT.md).
+Este documento é a fonte suprema da verdade para o desenvolvimento do **Olho de Odin 2**, aglutinando todas as lógicas extraídas, refinadas e blindadas nos módulos da pasta `/specs`.
 
 ---
 
-## 2. Database Schema (SQLite)
-
-The database must use a single-file structure with multi-profile support. Below is the proposed SQL schema:
-
-```sql
--- Profiles table
-CREATE TABLE IF NOT EXISTS profiles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    character_name TEXT DEFAULT NULL, -- Registered in-game character name for shop monitoring
-    watchlist_interval_minutes INTEGER DEFAULT 15,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Items monitored in profiles
-CREATE TABLE IF NOT EXISTS items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    profile_id INTEGER NOT NULL,
-    item_id INTEGER NOT NULL, -- Universal Ragnarok Item ID
-    item_name TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
-    UNIQUE(profile_id, item_id)
-);
-
--- Watchlist table (associates items with monitoring state)
-CREATE TABLE IF NOT EXISTS watchlist (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    profile_id INTEGER NOT NULL,
-    item_id INTEGER NOT NULL,
-    is_active INTEGER DEFAULT 1, -- Boolean (0 or 1)
-    is_own_shop INTEGER DEFAULT 0, -- Boolean (0 or 1) indicating if being sold by the user currently
-    last_known_quantity INTEGER DEFAULT NULL, -- Tracks itemCnt to monitor sales vs disconnects
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
-    FOREIGN KEY (profile_id, item_id) REFERENCES items(profile_id, item_id) ON DELETE CASCADE,
-    UNIQUE(profile_id, item_id)
-);
-
--- Cache table for API Responses
-CREATE TABLE IF NOT EXISTS api_cache (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    item_id INTEGER NOT NULL,
-    endpoint_type TEXT NOT NULL, -- 'search_trading', 'price_history', 'market_price_search'
-    response_payload TEXT NOT NULL, -- JSON-serialized parsed payload
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(item_id, endpoint_type)
-);
-
--- Store Coordinate Details Cache (Linked to temporary Shop Sale ID - ssi)
-CREATE TABLE IF NOT EXISTS store_coordinate_cache (
-    ssi TEXT PRIMARY KEY,
-    map_name TEXT NOT NULL,
-    xpos TEXT NOT NULL,
-    ypos TEXT NOT NULL,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
+## 1. Stack e Plataforma Base
+- **Plataforma**: Desktop nativo via **Electron**.
+- **Linguagem**: JavaScript/TypeScript.
+- **Banco de Dados**: Arquivo local unificado **SQLite** (`olhodeodin.db`).
+- **Sistema Operacional Alvo**: Windows (Entrega via instalador `.exe` "zero-setup").
 
 ---
 
-## 3. External API Client & RSC Parsing
-
-All outbound requests to `https://ro.gnjoylatam.com` must route through a central `RequestQueueManager` in the Electron main process.
-
-### Rate Limiting & Queue Rules
-- **Strict Interval:** Minimum 3 seconds between any two outgoing HTTP requests.
-- **Priority Queuing:** 
-  1. **High Priority (Immediate):** Manual user-triggered updates (e.g., clicking "Update" in the UI, or clicking the `/navi` coordinate retrieval).
-  2. **Medium Priority:** Watchlist background observations.
-  3. **Low Priority:** Bulk CSV imports.
-
-### RSC Parsing Strategy
-Next.js React Server Component (RSC) text responses must be parsed line-by-line:
-1. Locate the line starting with the target index (e.g., `10:` for searches, `1:` for detail POST requests).
-2. Find the first colon (`:`) of that line and extract the substring immediately following it.
-3. Parse the remaining substring using standard `JSON.parse`.
-4. Traverse the resulting JavaScript object/array to retrieve data fields. **Never use custom regex or split strings on commas to parse fields**, to prevent crashes if shop, player, or item names contain special characters (commas, backticks, quotes).
+## 2. GnJoy Client e RSC Parser
+A API do Ragnarok LATAM não é REST. Ela retorna fluxos *React Server Components (RSC)*.
+- **Extração Segura (Anti-Regex)**: O parser deve encontrar as linhas prefixadas (ex: `10:` para listas, `1:` para POST), **remover o prefixo**, e executar um `JSON.parse()` nativo no resto da string. Regex é estritamente proibido para extração de valores, pois nomes de itens e lojas contêm aspas, parênteses e vírgulas.
+- **Sessão Dinâmica (`Next-Action`)**: As rotas de detalhamento e histórico exigem o Hash/ID numérico de um Server Action. Esse valor (ex: `153b6f0e...`) deve ser extraído via GET inicial no HTML/RSC e injetado no header `Next-Action` de todos os requests POST subsequentes da mesma sessão.
 
 ---
 
-## 4. Analytical Metrics & Strategies Formulas
-
-The application must compute the following metrics on the dashboard using a combination of active listings (Endpoint 1) and 10-day history details (`priceDetailDayList` from Endpoint 3/4):
-
-### Metrics
-1. **Weighted Average Price (Média Ponderada Real - $P_{avg}$):**
-   $$ P_{avg} = \frac{\sum_{i=1}^{n} (\text{avgItemPrice}_{i} \times \text{itemCnt}_{i})}{\sum_{i=1}^{n} \text{itemCnt}_{i}} $$
-   where $i$ iterates through the days in `priceDetailDayList` (typically 10 days).
-2. **Current Spread (Spread Atual):**
-   $$ \text{Spread} = \text{maxItemPrice}_{\text{active}} - \text{minItemPrice}_{\text{active}} $$
-   where prices are obtained from the current active stores list (Endpoint 1).
-3. **Competition Pressure (Pressão da Concorrência - $CP$):**
-   $$ CP = \frac{\sum \text{itemCnt}_{\text{active}}}{\text{Mean}(\text{itemCnt}_{10\text{-day}})} $$
-   If $CP > 1.0$, the market is flagged as **Saturated**.
-
-### Alerta de Status
-- **Alta Demanda (Hot Item):** Triggered if active stock is critically low and prices are stable/rising:
-  $$ \sum \text{itemCnt}_{\text{active}} < 0.30 \times \text{Mean}(\text{itemCnt}_{10\text{-day}}) \quad \text{AND} \quad P_{3\text{-day}} \ge 0.95 \times P_{10\text{-day}} $$
-- **Volatilidade (Unstable Market):** Computes daily volatility: $\text{Vol}_d = \frac{\text{maxItemPrice}_d - \text{minItemPrice}_d}{\text{avgItemPrice}_d}$. 
-  - **Stable ("Dinheiro Certo"):** Historical mean $\text{Vol}_{\text{avg}} < 15\%$
-  - **Volatile (Unstable):** Historical mean $\text{Vol}_{\text{avg}} \ge 35\%$
-- **Crash Alert (Quedas Bruscas):** Triggered if Day 1 (most recent historical day) shows both a price and volume crash compared to the average of Days 2, 3, and 4:
-  $$ \text{Price}_{\text{Day1}} < 0.70 \times \text{Price}_{\text{Days2-4}} \quad \text{AND} \quad \text{Volume}_{\text{Day1}} < 0.50 \times \text{Volume}_{\text{Days2-4}} $$
-
-### Sale Strategies
-- **Undercutting:** Recommend price as $P_{\text{lowest}} - 1 \text{ Zeny}$, ignoring active stores that only have a stock of 1 unit.
-- **Premium Positioning:** If the cheapest active competitor has low stock ($\text{itemCnt} < 5\% \times \text{Mean}(\text{itemCnt}_{10\text{-day}})$), recommend matching the price of the 2nd or 3rd cheapest competitor.
-- **Flipping (Troll Protection):** If the minimum active price is $> 30\%$ below the 3-day historical average price ($P_{3\text{-day}}$), recommend **not selling** or **buying out the cheap competitor** (Flipping).
+## 3. Gerenciamento de Fila e Rate Limit
+A GnJoy bane IPs que ultrapassam o limite rígido de conexões temporárias.
+- **Limite Intransponível**: O aplicativo deve realizar, no máximo, **1 requisição a cada 3 segundos (3000ms)**.
+- **Fila Global (`RequestQueueManager`)**: Este Singleton deve rodar exclusivamente no **Main Process do Electron**. Toda tentativa de acesso à rede passa por ele.
+- **Prioridade de Fila**:
+  1. **Prioridade Máxima**: Monitoramento "Minha Loja" (para alertar Vendas ou DC instantaneamente) e Comandos do Usuário (Busca manual ou requisição Lazy Load de `/navi`).
+  2. **Prioridade Normal**: Atualizações cíclicas em background da Watchlist.
+  3. **Prioridade Baixa**: Importação em Massa de itens (`.txt`).
 
 ---
 
-## 5. Watchlist Observation Engine
+## 4. Métricas Financeiras e Fórmulas Puras
+Os cálculos usam uma janela móvel (Timeframe) padrão dos **últimos 7 dias** (Endpoint 6) para evitar viés de manutenções antigas, cruzando-os com as listagens ao vivo (Endpoint 1).
 
-- **Execution:** Monitoring runs only when the Electron window is open.
-- **Interval Control:** The update interval $T$ is profile-configurable but dynamically bounded to prevent request overlaps:
-  $$ T \ge N \times 3 \text{ seconds} $$
-  where $N$ is the number of active watchlist items.
-- **Spacing:** Updates are spaced evenly across the interval. An update is scheduled every $S = T / N$ seconds.
-- **Notifications:** Dispatched as in-app notifications and native OS alerts (via Electron's `Notification` API) when a sale strategy criterion is met.
+1. **Média Ponderada Real (Preço Justo)**:
+   $$ P_{avg} = \frac{\Sigma^{7}_{i = 1} (avgItemPrice_{i} \times itemCnt_{i})}{\Sigma^{7}_{i = 1} itemCnt_{i}} $$
+2. **Pressão da Concorrência (Saturação)**:
+   $$ CP = \frac{\text{Estoque Ativo Total (End 1)}}{\text{Média Diária Vendida (7 Dias)}} $$
+
+### Status de Mercado (Tags Visuais)
+- **🔥 Alta Demanda (Hot Item)**: Estoque Ativo Total < Média Diária (7 dias). O mercado está faminto.
+- **⚠️ Saturado**: Pressão da Concorrência (CP) > 1.5 (150%).
+- **📈 Volátil**: Diferença entre Mínima e Máxima do mesmo dia supera **30%**.
+- **🚨 Quedas Bruscas (Crash Alert)**: O último dia fechado teve queda > **30%** no preço e > **50%** no volume comparado à média dos 3 dias imediatamente anteriores. Indício de despejo de estoque.
+
+### Algoritmos de Precificação Ativa
+- **Undercutting Rápido**: O sistema busca o menor preço atual **ignorando lojas com estoque irrisório (< 5% da média diária)** e sugere preço -1 Zeny.
+- **Posicionamento Premium**: Se o menor preço for de um "troll" ou estoque minúsculo (< 5%), ignora e empata o preço com o 2º ou 3º vendedor mais barato.
+- **Proteção Flipping**: Se o mínimo ativo atual estiver **> 30% menor** que a Média Ponderada Real dos últimos 3 dias, sugere **Compra (Flipping)** ao invés de Venda.
 
 ---
 
-## 6. Functional Requirements & UX Flow
+## 5. Motor da Watchlist e Estado Assíncrono
+- **Mecânica de Espaçamento ($T_{min}$)**: A Watchlist jamais dispara em bloco. O tempo total do ciclo $T$ precisa respeitar $T_{min} = N \text{ (itens)} \times 3 \text{ segundos}$. O espaçamento entre consultas na fila global será sempre igual ou superior a 3s ($S = T / N$).
+- **Ciclo de Vida**: O Polling opera enquanto o aplicativo estiver aberto. Quando minimizado, alertas críticos usam **Notificações Nativas do OS** (API Electron `Notification`).
+- **Importação em Massa**: Aceita upload de `.txt` puro com 1 nome de item por linha. Enfileira pesquisas no background para resgatar IDs (`itemId`).
 
-1. **Profile Management:**
-   - On startup, prompt user to select a profile or create one.
-   - Export: Dumps all sqlite rows for `profile_id` to a JSON file.
-   - Import: Reads the JSON file and inserts/merges records under a new or existing profile name.
-2. **Bulk Import:**
-   - Accepts a text file with a list of item names (one per line).
-   - Enqueues search requests to resolve `itemId` for each name using the `RequestQueueManager`.
-3. **Item Dashboard:**
-   - Displays watchlist items with color-coded status badges (Hot, Volatile, Saturated, Crash).
-   - Detailed panel shows current sellers list (Endpoint 1) and a historical chart of prices/volumes.
-4. **On-Demand Coordinates:**
-   - Display a "Copiar /navi" button next to each active store.
-   - Clicking it queries Endpoint 2 (if not already cached for that `ssi`), copies the command `/navi {mapName} {xpos}/{ypos}` to the clipboard, and shows a temporary success toast.
-5. **API Request Monitoring Footer:**
-   - A very discreet, minimal footer displayed at the bottom of the interface.
-   - When an API request is running (from the `RequestQueueManager` queue), show a loading spinner and the request endpoint path (e.g., `/shop-search/trading` or `/shop-search/market-price`) on the left side.
-   - When the request completes or fails, display a colored status label (e.g., green "OK" or red "FAIL") on the right side.
-   - Clicking on the footer expands a panel showing the historical log of all recent API requests (with fields like timestamp, endpoint path, query parameters, latency/duration, and response status).
-6. **Own Shop & Disconnect (DC) Monitoring:**
-   - In the Watchlist UI, allow the user to check a toggle/box indicating: "Esta na minha loja agora" (`is_own_shop = 1`).
-   - The user must register their character name (`character_name`) in their Profile settings.
-   - For all items flagged with `is_own_shop = 1`, the background update engine will:
-     - Query Endpoint 1 (Search Trading) for the item.
-     - Search the active stores list for an entry where `itemSellerCharName` matches the profile's `character_name`.
-     - **Venda Parcial (Partial Sale):** If the character is found but the current `itemCnt` is less than `last_known_quantity`, trigger a native notification: *"Você vendeu [diferença] unidades de [item_name]!"* and update `last_known_quantity` to the new value.
-     - **Venda Completa ou DC (Full Sale or Disconnect):** If the character name is no longer found in the active listings:
-       - Trigger a native notification: *"[item_name] não está mais anunciado. Possível venda completa ou desconexão (DC) detectada."*
-       - Set `is_own_shop = 0` and reset `last_known_quantity = NULL` in the database.
-     - **Initial Setup / Increase:** If `last_known_quantity` is `NULL` when the item is first found, set it to the current `itemCnt` without triggering a notification.
+---
 
+## 6. Tracker da "Minha Loja" e Desconexão
+Usuários cadastram o nome do Personagem no banco SQLite (`character_name`). Ao invés de telas avulsas, o sistema ativa uma flag booleana `isInMyStore: true` num item da Watchlist.
+- O App enfileira varreduras com **Prioridade Máxima**.
+- Se a loja do usuário perder volume, dispara: *"Você vendeu X unidades!"*.
+- Se a loja **sumir do mapa** repentinamente, como a API não distingue, emite alerta Híbrido: *"Alerta ⚠️: Sua loja sumiu do mercado. Você pode ter esgotado o estoque ou tomado Disconnect (DC)."*
 
+---
+
+## 7. Componentes de UX e Diagnóstico
+- **Barra de Log Global**: Componente de rodapé atrelado ao `RequestQueueManager`.
+  - *Colapsada*: Exibe Ações Humanas e Fila (Ex: "Buscando Detalhes... 4 pendentes") + Spinner. Não assusta o usuário comum.
+  - *Expandida*: Developer View (Method, Path longo, e cores semânticas: Verde=OK, Vermelho=Rate Limit/Erro, Amarelo=Na Fila).
+- **Lista de Lojas e Lazy Loading (`/navi`)**: 
+  - Carrega as lojas ativas instantaneamente sem dados inúteis.
+  - Ao expandir uma loja específica (sob demanda via `ssi`), injeta o header `Next-Action` e puxa as coordenadas X/Y.
+  - Formata como `/navi {mapName} {x/y}`, copia pro Clipboard do usuário e **cacheia no SQLite atrelado ao ssi**, impedindo requisições repetidas se o usuário clicar várias vezes na mesma loja ativa.
