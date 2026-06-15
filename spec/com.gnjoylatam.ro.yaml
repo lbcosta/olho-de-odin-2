@@ -1,0 +1,818 @@
+openapi: 3.0.0
+info:
+  title: Ragnarok Online LATAM - API (com.gnjoylatam.ro)
+  description: Detalha as rotas e parâmetros da API (Next.js) do Ragnarok Online LATAM em formato REST
+  version: 1.0.0
+servers:
+  - url: https://ro.gnjoylatam.com
+    description: Servidor Oficial Ragnarok Online LATAM
+
+paths:
+  "/shop-search/trading (1)":
+    get:
+      tags: ["Mercado"]
+      summary: Lista lojas que estão vendendo um item no mercado
+      description: Retorna a lista de lojas/itens ativos no mercado filtrados por tipo de loja, servidor e palavra-chave.
+      parameters:
+        - name: storeType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [BUY, SELL]
+          example: BUY
+          description: Tipo de loja (ex. BUY para comprar, SELL para vender)
+        - name: serverType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [FREYA, NIDHOGG]
+          example: NIDHOGG
+          description: Servidor do jogo
+        - name: searchWord
+          in: query
+          required: true
+          schema:
+            type: string
+          example: elixir vermelho
+          description: Nome do item a ser buscado no mercado
+      responses:
+        200:
+          description: Sucesso ao retornar o payload estruturado em formato Next.js (RSC - React Server Components). <br> - A resposta HTTP real desta rota SEMPRE será uma string no formato RSC (React Server Components), conforme exemplificado no text/plain abaixo. <br> - O Media type application/json NÃO é retornado diretamente pela API. Ele está documentado aqui APENAS para mostrar o esquema lógico do resultado pós-parsing (os dados finais que você vai extrair de dentro da string RSC).
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                1:"$Sreact.fragment"
+                3:I[59665,[],"OutletBoundary"]
+                6:I[74911,[],"AsyncMetadataOutlet"]
+                8:I[59665,[],"ViewportBoundary"]
+                a:I[59665,[],"MetadataBoundary"]
+                c:"$Sreact.suspense"
+                d:I[74911,[],"AsyncMetadata"]
+                f:I[33485,["4166","static/chunks/4166-8f91b73fcd947944.js","6874","static/chunks/6874-d0d5310caca146d8.js","1597","static/chunks/1597-ae69d14a6f13865c.js","3353","static/chunks/3353-137df5d89fe70adb.js","7990","static/chunks/7990-bb9af786377c30d5.js","7679","static/chunks/7679-4315101557536655.js","5525","static/chunks/5525-2c7ec285918187a4.js","2648","static/chunks/app/%5Blocale%5D/(primary)/intro/shop-search/%5Bid%5D/page-0772883584795883.js"],"default"]
+                11:I[65459,["4166","static/chunks/4166-8f91b73fcd947944.js","6874","static/chunks/6874-d0d5310caca146d8.js","1597","static/chunks/1597-ae69d14a6f13865c.js","3353","static/chunks/3353-137df5d89fe70adb.js","7990","static/chunks/7990-bb9af786377c30d5.js","7679","static/chunks/7679-4315101557536655.js","5525","static/chunks/5525-2c7ec285918187a4.js","2648","static/chunks/app/%5Blocale%5D/(primary)/intro/shop-search/%5Bid%5D/page-0772883584795883.js"],"default"]
+                0:{"b":"-EBlZAYMwEznljqiAN2bB","f":[["children",["locale","pt","d"],"children","(primary)","children","intro","children","shop-search","children",["id","trading","d"],"children","__PAGE__?{\"storeType\":\"BUY\",\"serverType\":\"NIDHOGG\",\"searchWord\":\"elixir vermelho\"}",["__PAGE__?{\"storeType\":\"BUY\",\"serverType\":\"NIDHOGG\",\"searchWord\":\"elixir vermelho\"}",{}],["__PAGE__",["$","$1","c",{"children":["$L2","$undefined",null,["$","$L3",null,{"children":["$L4","$L5",["$","$L6",null,{"promise":"$@7"}]]}]]}],{},null,false],["$","$1","h",{"children":[null,["$","$1","waGFJbDa0OIGPZ_p7V2IB",{"children":[["$","$L8",null,{"children":"$L9"}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],[["$","$La","waGFJbDa0OIGPZ_p7V2IB",{"children":"$Lb"}]],null]}],false]],"S":false}
+                b:["$","$c",null,{"fallback":null,"children":["$","$Ld",null,{"promise":"$@e"}]}]
+                5:null
+                2:["$","div",null,{"children":[["$","$c","{\"storeType\":\"BUY\",\"serverType\":\"NIDHOGG\",\"searchWord\":\"elixir vermelho\"}",{"fallback":[["$","$Lf",null,{}],["$","div",null,{"className":"page_fallback_ui__tKPLp undefined","children":[["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}]]}]],"children":"$L10"}],["$","div",null,{"className":"page_popover_wrpper__X_mwr","children":["$","$L11",null,{"className":"page_checked_popover__s52zS"}]}]]}]
+                9:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1"}]]
+                4:null
+                7:{"metadata":[["$","title","0",{"children":"Ragnarok Online â€“ O ClÃ¡ssico MMORPG EstÃ¡ de Volta!"}],["$","meta","1",{"name":"description","content":"Ragnarok Online retorna com novas aventuras, batalhas Ã©picas e um mundo vasto para explorar. Jogue agora o MMORPG clÃ¡ssico!"}],["$","meta","2",{"name":"keywords","content":"Ragnarok Online,Baixar Ragnarok Online,Novo Ragnarok Online,MMORPG clÃ¡ssico online,Como jogar Ragnarok Online,Eventos Ragnarok Online"}],["$","meta","3",{"property":"og:title","content":"Ragnarok Online â€“ O ClÃ¡ssico MMORPG EstÃ¡ de Volta!"}],["$","meta","4",{"property":"og:description","content":"Ragnarok Online retorna com novas aventuras, batalhas Ã©picas e um mundo vasto para explorar. Jogue agora o MMORPG clÃ¡ssico!"}],["$","meta","5",{"property":"og:image","content":"https://assets.gnjoylatam.com/static/web/ro/assets/images/ro_og.webp"}],["$","meta","6",{"name":"twitter:card","content":"summary_large_image"}],["$","meta","7",{"name":"twitter:title","content":"Ragnarok Online â€“ O ClÃ¡ssico MMORPG EstÃ¡ de Volta!"}],["$","meta","8",{"name":"twitter:description","content":"Ragnarok Online retorna com novas aventuras, batalhas Ã©picas e um mundo vasto para explorar. Jogue agora o MMORPG clÃ¡ssico!"}],["$","meta","9",{"name":"twitter:image","content":"https://assets.gnjoylatam.com/static/web/ro/assets/images/ro_og.webp"}],["$","link","10",{"rel":"icon","href":"/favicon.ico","type":"image/x-icon","sizes":"16x16"}]],"error":null,"digest":"$undefined"}
+                e:{"metadata":"$7:metadata","error":null,"digest":"$undefined"}
+                12:I[52783,["4166","static/chunks/4166-8f91b73fcd947944.js","6874","static/chunks/6874-d0d5310caca146d8.js","1597","static/chunks/1597-ae69d14a6f13865c.js","3353","static/chunks/3353-137df5d89fe70adb.js","7990","static/chunks/7990-bb9af786377c30d5.js","7679","static/chunks/7679-4315101557536655.js","5525","static/chunks/5525-2c7ec285918187a4.js","2648","static/chunks/app/%5Blocale%5D/(primary)/intro/shop-search/%5Bid%5D/page-0772883584795883.js"],"default"]
+                 10:["$","$L12",null,{"queryParams":{"storeType":"BUY","serverType":"NIDHOGG","searchWord":"elixir vermelho"},"list":[{"svrId":303,"itemId":1100003,"mapId":835,"ssi":"7650148185167452340","itemName":"Elixir Vermelho","databaseImgPath":"https://assets.gnjoylatam.com/static/upload/database/item/2025/10/1100003.png","databaseType":"consumable","storeName":"Consumiveis/Elixir/Hp/Etc","itemPrice":1400,"itemCnt":6000,"slotMaxCount":"","storeTypeName":"BUY","itemSellerCharName":"Da.Turca."},{"svrId":303,"itemId":1100003,"mapId":835,"ssi":"7650235888399655364","itemName":"Elixir Vermelho","databaseImgPath":"https://assets.gnjoylatam.com/static/upload/database/item/2025/10/1100003.png","databaseType":"consumable","storeName":"RODÃZIO LVL 5-8","itemPrice":1399,"itemCnt":5000,"slotMaxCount":"","storeTypeName":"BUY","itemSellerCharName":"No trade Ã© mais barato"}],"totalCount":2}]
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopSearchTradingPayload"
+  "/shop-search/trading (2)":
+    post:
+      tags: ["Mercado"]
+      summary: Detalhes da Loja que vende o item
+      description: Retorna informações detalhadas de uma determinada loja que vende o item (ex. coordenadas x/y no mapa). Retorna no formato Next.js RSC.
+      parameters:
+        - name: storeType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [BUY, SELL]
+          example: BUY
+          description: Tipo de loja (ex. BUY para comprar, SELL para vender)
+        - name: serverType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [FREYA, NIDHOGG]
+          example: NIDHOGG
+          description: Servidor do jogo
+        - name: searchWord
+          in: query
+          required: true
+          schema:
+            type: string
+          example: elixir vermelho
+          description: Nome do item a ser buscado no mercado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/StoreInfoRequest"
+      responses:
+        200:
+          description: Sucesso ao retornar o payload estruturado em formato Next.js (RSC - React Server Components). <br> - A resposta HTTP real desta rota SEMPRE será uma string no formato RSC, conforme exemplificado no text/plain abaixo. <br> - O Media type application/json NÃO é retornado diretamente pela API. Ele está documentado aqui APENAS para mostrar o esquema lógico do resultado pós-parsing (os dados finais que você vai extrair de dentro da string RSC).
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                0:{"a":"$@1","f":"","b":"-EBlZAYMwEznljqiAN2bB"}
+                1:{"data":{"svrId":303,"svrName":"NIDHOGG","itemId":1100003,"mapId":835,"ssi":"7650148185167452340","storeName":"Consumiveis/Elixir/Hp/Etc","mapName":"prt_mk.gat","itemSellerCharName":"Da.Turca.","itemFullName":"Elixir Vermelho","itemPrice":1400,"marketStoreTypeCode":"BUY","itemCnt":6000,"databaseImgPath":"https://assets.gnjoylatam.com/static/upload/database/item/2025/10/1100003.png","databaseType":"consumable","xpos":"166","ypos":"146"},"success":true}
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreInfoPayload"
+  "/shop-search/trading (3)":
+    post:
+      tags: ["Mercado"]
+      summary: Detalhes do Item sendo vendido
+      description: Após buscar pelo item, retorna as informações do item que está sendo vendido na loja. Retorna no formato Next.js RSC.
+      parameters:
+        - name: storeType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [BUY, SELL]
+          example: BUY
+          description: Tipo de loja (ex. BUY para comprar, SELL para vender)
+        - name: serverType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [FREYA, NIDHOGG]
+          example: NIDHOGG
+          description: Servidor do jogo
+        - name: searchWord
+          in: query
+          required: true
+          schema:
+            type: string
+          example: elixir vermelho
+          description: Nome do item a ser buscado no mercado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ItemInfoRequest"
+            example:
+              - type: "item"
+                params:
+                  svrId: 303
+                  mapId: 835
+                  ssi: "7650148185167452340"
+                  multiLan: "en-US"
+      responses:
+        200:
+          description: Sucesso ao retornar o payload estruturado em formato Next.js (RSC - React Server Components). <br> - A resposta HTTP real desta rota SEMPRE será uma string no formato RSC, conforme exemplificado no text/plain abaixo. <br> - O Media type application/json NÃO é retornado diretamente pela API. Ele está documentado aqui APENAS para mostrar o esquema lógico do resultado pós-parsing (os dados finais que você vai extrair de dentro da string RSC).
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                0:{"a":"$@1","f":"","b":"-EBlZAYMwEznljqiAN2bB"}
+                1:{"data":{"svrId":303,"itemId":1100003,"itemName":"Elixir Vermelho","itemPrice":1400,"mapId":835,"ssi":"7650148185167452340","itemType":null,"itemOptionProperty":null,"randomOpt1":null,"randomOpt2":null,"randomOpt3":null,"randomOpt4":null,"slot1":null,"slot2":null,"slot3":null,"slot4":null,"hasDatabaseItem":true,"databaseImgPath":"https://assets.gnjoylatam.com/static/upload/database/item/2025/10/1100003.png","databaseType":"consumable"},"success":true}
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemInfoPayload"
+  "/shop-search/trading (4)":
+    post:
+      tags: ["Mercado"]
+      summary: Histórico de Preço do Item sendo vendido
+      description: Após buscar pelo item, é possível o jogador ver o histórico de preço do item que está sendo vendido. Retorna no formato Next.js RSC.
+      parameters:
+        - name: storeType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [BUY, SELL]
+          example: BUY
+          description: Tipo de loja (ex. BUY para comprar, SELL para vender)
+        - name: serverType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [FREYA, NIDHOGG]
+          example: NIDHOGG
+          description: Servidor do jogo
+        - name: searchWord
+          in: query
+          required: true
+          schema:
+            type: string
+          example: elixir vermelho
+          description: Nome do item a ser buscado no mercado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/PriceHistoryRequest"
+            example:
+              - type: "price"
+                params:
+                  itemId: 1100003
+                  svrId: 303
+                  page: 1
+                  limit: 10
+                  period: "$undefined"
+      responses:
+        200:
+          description: Sucesso ao retornar o histórico de preço estruturado em formato Next.js (RSC). <br> - A resposta HTTP real desta rota SEMPRE será uma string no formato RSC. <br> - O Media type application/json NÃO é retornado diretamente pela API. Ele está documentado aqui APENAS para mostrar o esquema lógico do resultado pós-parsing (os dados finais que você vai extrair de dentro da string RSC).
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                0:{"a":"$@1","f":"","b":"-EBlZAYMwEznljqiAN2bB"}
+                1:{"data":{"itemPriceMin":1002,"itemPriceMax":9999999,"priceDetailChartList":[{"nowDate":"2026-06-11","minItemPrice":1396,"maxItemPrice":1600,"avgItemPrice":1422},{"nowDate":"2026-06-10","minItemPrice":1399,"maxItemPrice":1500,"avgItemPrice":1430},{"nowDate":"2026-06-09","minItemPrice":1399,"maxItemPrice":1500,"avgItemPrice":1409},{"nowDate":"2026-06-08","minItemPrice":1300,"maxItemPrice":1600,"avgItemPrice":1408},{"nowDate":"2026-06-07","minItemPrice":1300,"maxItemPrice":1600,"avgItemPrice":1379},{"nowDate":"2026-06-06","minItemPrice":1299,"maxItemPrice":1500,"avgItemPrice":1333},{"nowDate":"2026-06-05","minItemPrice":1002,"maxItemPrice":1599,"avgItemPrice":1398},{"nowDate":"2026-06-04","minItemPrice":1250,"maxItemPrice":1599,"avgItemPrice":1529},{"nowDate":"2026-06-03","minItemPrice":1050,"maxItemPrice":1598,"avgItemPrice":1232},{"nowDate":"2026-06-02","minItemPrice":1100,"maxItemPrice":1599,"avgItemPrice":1225},{"nowDate":"2026-06-01","minItemPrice":1200,"maxItemPrice":1599,"avgItemPrice":1284},{"nowDate":"2026-05-31","minItemPrice":1200,"maxItemPrice":1600,"avgItemPrice":1349},{"nowDate":"2026-05-30","minItemPrice":1487,"maxItemPrice":1599,"avgItemPrice":1501},{"nowDate":"2026-05-29","minItemPrice":1496,"maxItemPrice":1698,"avgItemPrice":1546},{"nowDate":"2026-05-27","minItemPrice":1526,"maxItemPrice":1555,"avgItemPrice":1531}],"priceDetailDayList":[{"nowDate":"2026-06-11","minItemPrice":1396,"maxItemPrice":1600,"avgItemPrice":1422,"itemCnt":16700,"totalCount":31},{"nowDate":"2026-06-10","minItemPrice":1399,"maxItemPrice":1500,"avgItemPrice":1430,"itemCnt":14444,"totalCount":31},{"nowDate":"2026-06-09","minItemPrice":1399,"maxItemPrice":1500,"avgItemPrice":1409,"itemCnt":24427,"totalCount":31},{"nowDate":"2026-06-08","minItemPrice":1300,"maxItemPrice":1600,"avgItemPrice":1408,"itemCnt":21741,"totalCount":31},{"nowDate":"2026-06-07","minItemPrice":1300,"maxItemPrice":1600,"avgItemPrice":1379,"itemCnt":24120,"totalCount":31},{"nowDate":"2026-06-06","minItemPrice":1299,"maxItemPrice":1500,"avgItemPrice":1333,"itemCnt":35509,"totalCount":31},{"nowDate":"2026-06-05","minItemPrice":1002,"maxItemPrice":1599,"avgItemPrice":1398,"itemCnt":26297,"totalCount":31},{"nowDate":"2026-06-04","minItemPrice":1250,"maxItemPrice":1599,"avgItemPrice":1529,"itemCnt":27169,"totalCount":31},{"nowDate":"2026-06-03","minItemPrice":1050,"maxItemPrice":1598,"avgItemPrice":1232,"itemCnt":39126,"totalCount":31},{"nowDate":"2026-06-02","minItemPrice":1100,"maxItemPrice":1599,"avgItemPrice":1225,"itemCnt":29675,"totalCount":31}]},"success":true}
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceHistoryPayload"
+  "/shop-search/market-price (5)":
+    get:
+      tags: ["Histórico"]
+      summary: Busca de Item no Histórico
+      description: É possível buscar por itens que já foram vendidos no passado, para ter uma ideia do valor do item e seu histórico de venda.
+      parameters:
+        - name: serverType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [FREYA, NIDHOGG]
+          example: NIDHOGG
+          description: Servidor do jogo
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["1", "7", "30", "ALL"]
+          example: ALL
+          description: Período da busca em dias (1, 7, 30 ou ALL)
+        - name: searchWord
+          in: query
+          required: true
+          schema:
+            type: string
+          example: elixir vermelho
+          description: Nome do item a ser buscado no mercado
+      responses:
+        200:
+          description: Sucesso ao buscar item no histórico. Retorna no formato Next.js RSC. <br> - O Media type application/json NÃO é retornado diretamente pela API. Ele está documentado aqui APENAS para mostrar o esquema lógico do resultado pós-parsing.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                1:"$Sreact.fragment"
+                3:I[59665,[],"OutletBoundary"]
+                6:I[74911,[],"AsyncMetadataOutlet"]
+                8:I[59665,[],"ViewportBoundary"]
+                a:I[59665,[],"MetadataBoundary"]
+                c:"$Sreact.suspense"
+                d:I[74911,[],"AsyncMetadata"]
+                f:I[33485,["4166","static/chunks/4166-8f91b73fcd947944.js","6874","static/chunks/6874-d0d5310caca146d8.js","1597","static/chunks/1597-ae69d14a6f13865c.js","3353","static/chunks/3353-137df5d89fe70adb.js","7990","static/chunks/7990-bb9af786377c30d5.js","7679","static/chunks/7679-4315101557536655.js","5525","static/chunks/5525-2c7ec285918187a4.js","2648","static/chunks/app/%5Blocale%5D/(primary)/intro/shop-search/%5Bid%5D/page-0772883584795883.js"],"default"]
+                11:I[65459,["4166","static/chunks/4166-8f91b73fcd947944.js","6874","static/chunks/6874-d0d5310caca146d8.js","1597","static/chunks/1597-ae69d14a6f13865c.js","3353","static/chunks/3353-137df5d89fe70adb.js","7990","static/chunks/7990-bb9af786377c30d5.js","7679","static/chunks/7679-4315101557536655.js","5525","static/chunks/5525-2c7ec285918187a4.js","2648","static/chunks/app/%5Blocale%5D/(primary)/intro/shop-search/%5Bid%5D/page-0772883584795883.js"],"default"]
+                0:{"b":"-EBlZAYMwEznljqiAN2bB","f":[["children",["locale","pt","d"],"children","(primary)","children","intro","children","shop-search","children",["id","market-price","d"],"children","__PAGE__?{\"serverType\":\"NIDHOGG\",\"period\":\"ALL\",\"searchWord\":\"elixir vermelho\"}",["__PAGE__?{\"serverType\":\"NIDHOGG\",\"period\":\"ALL\",\"searchWord\":\"elixir vermelho\"}",{}],["__PAGE__",["$","$1","c",{"children":["$L2","$undefined",null,["$","$L3",null,{"children":["$L4","$L5",["$","$L6",null,{"promise":"$@7"}]]}]]}],{},null,false],["$","$1","h",{"children":[null,["$","$1","CDlmB_CSfc-c_H8y0JkUT",{"children":[["$","$L8",null,{"children":"$L9"}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],[["$","$La","CDlmB_CSfc-c_H8y0JkUT",{"children":"$Lb"}]],null]}],false]],"S":false}
+                b:["$","$c",null,{"fallback":null,"children":["$","$Ld",null,{"promise":"$@e"}]}]
+                5:null
+                2:["$","div",null,{"children":[["$","$c","{\"serverType\":\"NIDHOGG\",\"period\":\"ALL\",\"searchWord\":\"elixir vermelho\"}",{"fallback":[["$","$Lf",null,{}],["$","div",null,{"className":"page_fallback_ui__tKPLp page_market_price_fallback_ui__T3ncM","children":[["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}],["$","div",null,{}]]}]],"children":"$L10"}],["$","div",null,{"className":"page_popover_wrpper__X_mwr","children":["$","$L11",null,{"className":"page_checked_popover__s52zS"}]}]]}]
+                9:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1"}]]
+                4:null
+                7:{"metadata":[["$","title","0",{"children":"Ragnarok Online â€“ O ClÃ¡ssico MMORPG EstÃ¡ de Volta!"}],["$","meta","1",{"name":"description","content":"Ragnarok Online retorna com novas aventuras, batalhas Ã©picas e um mundo vasto para explorar. Jogue agora o MMORPG clÃ¡ssico!"}],["$","meta","2",{"name":"keywords","content":"Ragnarok Online,Baixar Ragnarok Online,Novo Ragnarok Online,MMORPG clÃ¡ssico online,Como jogar Ragnarok Online,Eventos Ragnarok Online"}],["$","meta","3",{"property":"og:title","content":"Ragnarok Online â€“ O ClÃ¡ssico MMORPG EstÃ¡ de Volta!"}],["$","meta","4",{"property":"og:description","content":"Ragnarok Online retorna com novas aventuras, batalhas Ã©picas e um mundo vasto para explorar. Jogue agora o MMORPG clÃ¡ssico!"}],["$","meta","5",{"property":"og:image","content":"https://assets.gnjoylatam.com/static/web/ro/assets/images/ro_og.webp"}],["$","meta","6",{"name":"twitter:card","content":"summary_large_image"}],["$","meta","7",{"name":"twitter:title","content":"Ragnarok Online â€“ O ClÃ¡ssico MMORPG EstÃ¡ de Volta!"}],["$","meta","8",{"name":"twitter:description","content":"Ragnarok Online retorna com novas aventuras, batalhas Ã©picas e um mundo vasto para explorar. Jogue agora o MMORPG clÃ¡ssico!"}],["$","meta","9",{"name":"twitter:image","content":"https://assets.gnjoylatam.com/static/web/ro/assets/images/ro_og.webp"}],["$","link","10",{"rel":"icon","href":"/favicon.ico","type":"image/x-icon","sizes":"16x16"}]],"error":null,"digest":"$undefined"}
+                e:{"metadata":"$7:metadata","error":null,"digest":"$undefined"}
+                12:I[99186,["4166","static/chunks/4166-8f91b73fcd947944.js","6874","static/chunks/6874-d0d5310caca146d8.js","1597","static/chunks/1597-ae69d14a6f13865c.js","3353","static/chunks/3353-137df5d89fe70adb.js","7990","static/chunks/7990-bb9af786377c30d5.js","7679","static/chunks/7679-4315101557536655.js","5525","static/chunks/5525-2c7ec285918187a4.js","2648","static/chunks/app/%5Blocale%5D/(primary)/intro/shop-search/%5Bid%5D/page-0772883584795883.js"],"default"]
+                10:["$","$L12",null,{"queryParams":{"serverType":"NIDHOGG","period":"ALL","searchWord":"elixir vermelho"},"list":[{"svrId":303,"itemId":1100003,"mapId":892,"ssi":"7650218064285270433","itemName":"Elixir Vermelho","databaseImgPath":"https://assets.gnjoylatam.com/static/upload/database/item/2025/10/1100003.png","databaseType":"consumable","totalItemCnt":488542,"minItemPrice":1002,"maxItemPrice":9999999,"avgItemPrice":229042}],"totalCount":1}]
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketPriceSearchPayload"
+  "/shop-search/market-price (6)":
+    post:
+      tags: ["Histórico"]
+      summary: Histórico detalhado do item
+      description: Histórico de Preço do Item selecionado a partir da Busca no Histórico. Retorna no formato Next.js RSC.
+      parameters:
+        - name: serverType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [FREYA, NIDHOGG]
+          example: NIDHOGG
+          description: Servidor do jogo
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["1", "7", "30", "ALL"]
+          example: ALL
+          description: Período da busca em dias (1, 7, 30 ou ALL)
+        - name: searchWord
+          in: query
+          required: true
+          schema:
+            type: string
+          example: elixir vermelho
+          description: Nome do item a ser buscado no mercado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/PriceHistoryRequest"
+            example:
+              - type: "price"
+                params:
+                  itemId: 1100003
+                  svrId: 303
+                  page: 1
+                  limit: 10
+                  period: "$undefined"
+      responses:
+        200:
+          description: Sucesso ao retornar o histórico de preço estruturado em formato Next.js (RSC). <br> - A resposta HTTP real desta rota SEMPRE será uma string no formato RSC. <br> - O Media type application/json NÃO é retornado diretamente pela API. Ele está documentado aqui APENAS para mostrar o esquema lógico do resultado pós-parsing.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                0:{"a":"$@1","f":"","b":"-EBlZAYMwEznljqiAN2bB"}
+                1:{"data":{"itemPriceMin":1002,"itemPriceMax":9999999,"priceDetailChartList":[{"nowDate":"2026-06-11","minItemPrice":1396,"maxItemPrice":1600,"avgItemPrice":1422},{"nowDate":"2026-06-10","minItemPrice":1399,"maxItemPrice":1500,"avgItemPrice":1430},{"nowDate":"2026-06-09","minItemPrice":1399,"maxItemPrice":1500,"avgItemPrice":1409},{"nowDate":"2026-06-08","minItemPrice":1300,"maxItemPrice":1600,"avgItemPrice":1408},{"nowDate":"2026-06-07","minItemPrice":1300,"maxItemPrice":1600,"avgItemPrice":1379},{"nowDate":"2026-06-06","minItemPrice":1299,"maxItemPrice":1500,"avgItemPrice":1333},{"nowDate":"2026-06-05","minItemPrice":1002,"maxItemPrice":1599,"avgItemPrice":1398},{"nowDate":"2026-06-04","minItemPrice":1250,"maxItemPrice":1599,"avgItemPrice":1529},{"nowDate":"2026-06-03","minItemPrice":1050,"maxItemPrice":1598,"avgItemPrice":1232},{"nowDate":"2026-06-02","minItemPrice":1100,"maxItemPrice":1599,"avgItemPrice":1225},{"nowDate":"2026-06-01","minItemPrice":1200,"maxItemPrice":1599,"avgItemPrice":1284},{"nowDate":"2026-05-31","minItemPrice":1200,"maxItemPrice":1600,"avgItemPrice":1349},{"nowDate":"2026-05-30","minItemPrice":1487,"maxItemPrice":1599,"avgItemPrice":1501},{"nowDate":"2026-05-29","minItemPrice":1496,"maxItemPrice":1698,"avgItemPrice":1546},{"nowDate":"2026-05-27","minItemPrice":1526,"maxItemPrice":1555,"avgItemPrice":1531}],"priceDetailDayList":[{"nowDate":"2026-06-11","minItemPrice":1396,"maxItemPrice":1600,"avgItemPrice":1422,"itemCnt":16700,"totalCount":31},{"nowDate":"2026-06-10","minItemPrice":1399,"maxItemPrice":1500,"avgItemPrice":1430,"itemCnt":14444,"totalCount":31},{"nowDate":"2026-06-09","minItemPrice":1399,"maxItemPrice":1500,"avgItemPrice":1409,"itemCnt":24427,"totalCount":31},{"nowDate":"2026-06-08","minItemPrice":1300,"maxItemPrice":1600,"avgItemPrice":1408,"itemCnt":21741,"totalCount":31},{"nowDate":"2026-06-07","minItemPrice":1300,"maxItemPrice":1600,"avgItemPrice":1379,"itemCnt":24120,"totalCount":31},{"nowDate":"2026-06-06","minItemPrice":1299,"maxItemPrice":1500,"avgItemPrice":1333,"itemCnt":35509,"totalCount":31},{"nowDate":"2026-06-05","minItemPrice":1002,"maxItemPrice":1599,"avgItemPrice":1398,"itemCnt":26297,"totalCount":31},{"nowDate":"2026-06-04","minItemPrice":1250,"maxItemPrice":1599,"avgItemPrice":1529,"itemCnt":27169,"totalCount":31},{"nowDate":"2026-06-03","minItemPrice":1050,"maxItemPrice":1598,"avgItemPrice":1232,"itemCnt":39126,"totalCount":31},{"nowDate":"2026-06-02","minItemPrice":1100,"maxItemPrice":1599,"avgItemPrice":1225,"itemCnt":29675,"totalCount":31}]},"success":true}
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceHistoryPayload"
+
+components:
+  schemas:
+    ShopSearchTradingPayload:
+      type: object
+      description: Estrutura dos dados contidos no payload Next.js RSC (React Server Components).
+      properties:
+        queryParams:
+          type: object
+          properties:
+            storeType:
+              type: string
+              example: BUY
+            serverType:
+              type: string
+              example: NIDHOGG
+            searchWord:
+              type: string
+              example: elixir vermelho
+        list:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopSearchTradingItem"
+        totalCount:
+          description: O número total de lojas encontradas que batem com os seus filtros.
+          type: integer
+          example: 2
+    ShopSearchTradingItem:
+      type: object
+      properties:
+        svrId:
+          description: Código numérico interno que a distribuidora usa para identificar o servidor.
+          type: integer
+          example: 303
+        itemId:
+          description: Código numérico universal do item dentro do banco de dados do Ragnarok Online.
+          type: integer
+          example: 1100003
+        mapId:
+          description: Identificador numérico do mapa onde o personagem do jogador está parado com a loja aberta.
+          type: integer
+          example: 835
+        ssi:
+          description: Shop Sale ID é um identificador único, longo e gerado pelo sistema para aquela loja/transação específica.
+          type: string
+          example: "7650148185167452340"
+        itemName:
+          description: Nome do item traduzido no idioma selecionado.
+          type: string
+          example: "Elixir Vermelho"
+        databaseImgPath:
+          description: Link direto da imagem (sprite/ícone) do item hospedado nos servidores da GNJOY, usado para renderizar o ícone do item na interface da web.
+          type: string
+          example: "https://assets.gnjoylatam.com/static/upload/database/item/2025/10/1100003.png"
+        databaseType:
+          description: Categoria do item no banco de dados.
+          type: string
+          example: "consumable"
+        storeName:
+          description: O título/nome que o jogador escreveu na lojinha dele.
+          type: string
+          example: "Consumiveis/Elixir/Hp/Etc"
+        itemPrice:
+          description: O preço em Zenys
+          type: integer
+          example: 1400
+        itemCnt:
+          description: Quantidade do item disponível na loja para venda (Estoque).
+          type: integer
+          example: 6000
+        slotMaxCount:
+          description: Quantidade máxima de slots de cartas disponíveis no item.
+          type: string
+          example: ""
+        storeTypeName:
+          description: Tipo da loja (Compra ou Venda).
+          type: string
+          example: "BUY"
+        itemSellerCharName:
+          description: Nome do personagem dono da loja.
+          type: string
+          example: "Da.Turca."
+    StoreInfoRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          example: store
+        params:
+          type: object
+          properties:
+            svrId:
+              type: integer
+              example: 303
+            mapId:
+              type: integer
+              example: 835
+            ssi:
+              type: string
+              example: "7650148185167452340"
+    StoreInfoPayload:
+      type: object
+      description: Estrutura lógica dos dados da loja retornados de forma embutida/serializada dentro do payload RSC após o parsing.
+      properties:
+        data:
+          type: object
+          properties:
+            svrId:
+              description: Código numérico interno que a distribuidora usa para identificar o servidor.
+              type: integer
+              example: 303
+            svrName:
+              description: Nome do servidor.
+              type: string
+              example: "NIDHOGG"
+            itemId:
+              description: Código numérico universal do item dentro do banco de dados do Ragnarok Online.
+              type: integer
+              example: 1100003
+            mapId:
+              description: Identificador numérico do mapa onde o personagem do jogador está parado com a loja aberta.
+              type: integer
+              example: 835
+            ssi:
+              description: Shop Sale ID é um identificador único, longo e gerado pelo sistema para aquela loja/transação específica.
+              type: string
+              example: "7650148185167452340"
+            storeName:
+              description: O título/nome que o jogador escreveu na lojinha dele.
+              type: string
+              example: "Consumiveis/Elixir/Hp/Etc"
+            mapName:
+              description: Nome do mapa onde a loja está localizada.
+              type: string
+              example: "prt_mk.gat"
+            itemSellerCharName:
+              description: Nome do personagem dono da loja.
+              type: string
+              example: "Da.Turca."
+            itemFullName:
+              description: Nome do item traduzido no idioma selecionado.
+              type: string
+              example: "Elixir Vermelho"
+            itemPrice:
+              description: O preço em Zenys
+              type: integer
+              example: 1400
+            marketStoreTypeCode:
+              description: Tipo da loja (Compra ou Venda).
+              type: string
+              example: "BUY"
+            itemCnt:
+              description: Quantidade do item disponível na loja para venda (Estoque).
+              type: integer
+              example: 6000
+            databaseImgPath:
+              description: Link direto da imagem (sprite/ícone) do item hospedado nos servidores da GNJOY, usado para renderizar o ícone do item na interface da web.
+              type: string
+              example: "https://assets.gnjoylatam.com/static/upload/database/item/2025/10/1100003.png"
+            databaseType:
+              description: Categoria do item no banco de dados.
+              type: string
+              example: "consumable"
+            xpos:
+              description: Posição X onde se encontra a loja no mapa.
+              type: string
+              example: "166"
+            ypos:
+              description: Posição Y onde se encontra a loja no mapa.
+              type: string
+              example: "146"
+        success:
+          type: boolean
+          example: true
+    ItemInfoRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "item"
+        params:
+          type: object
+          properties:
+            svrId:
+              description: Código numérico interno que a distribuidora usa para identificar o servidor.
+              type: integer
+              example: 303
+            mapId:
+              description: Identificador numérico do mapa onde o personagem do jogador está parado com a loja aberta.
+              type: integer
+              example: 835
+            ssi:
+              description: Shop Sale ID é um identificador único, longo e gerado pelo sistema para aquela loja/transação específica.
+              type: string
+              example: "7650148185167452340"
+            multiLan:
+              description: Idioma da localização do nome do item.
+              type: string
+              example: "en-US"
+    ItemInfoPayload:
+      type: object
+      description: Estrutura lógica dos dados do item retornados de forma embutida/serializada dentro do payload RSC após o parsing.
+      properties:
+        data:
+          type: object
+          properties:
+            svrId:
+              description: Código numérico interno que a distribuidora usa para identificar o servidor.
+              type: integer
+              example: 303
+            itemId:
+              description: Código numérico universal do item dentro do banco de dados do Ragnarok Online.
+              type: integer
+              example: 1100003
+            itemName:
+              description: Nome do item traduzido no idioma selecionado.
+              type: string
+              example: "Elixir Vermelho"
+            itemPrice:
+              description: O preço em Zenys
+              type: integer
+              example: 1400
+            mapId:
+              description: Identificador numérico do mapa onde o personagem do jogador está parado com a loja aberta.
+              type: integer
+              example: 835
+            ssi:
+              description: Shop Sale ID é um identificador único, longo e gerado pelo sistema para aquela loja/transação específica.
+              type: string
+              example: "7650148185167452340"
+            itemType:
+              description: Subtipo do item
+              type: string
+              nullable: true
+              example: null
+            itemOptionProperty:
+              description: Propriedades ou bônus fixos
+              type: string
+              nullable: true
+              example: null
+            randomOpt1:
+              description: Slot 1 de Encantamentos e Bônus adicionados ao item
+              type: string
+              nullable: true
+              example: null
+            randomOpt2:
+              description: Slot 2 de Encantamentos e Bônus adicionados ao item
+              type: string
+              nullable: true
+              example: null
+            randomOpt3:
+              description: Slot 3 de Encantamentos e Bônus adicionados ao item
+              type: string
+              nullable: true
+              example: null
+            randomOpt4:
+              description: Slot 4 de Encantamentos e Bônus adicionados ao item
+              type: string
+              nullable: true
+              example: null
+            slot1:
+              description: Slot 1 para Cartas
+              type: string
+              nullable: true
+              example: null
+            slot2:
+              description: Slot 2 para Cartas
+              type: string
+              nullable: true
+              example: null
+            slot3:
+              description: Slot 3 para Cartas
+              type: string
+              nullable: true
+              example: null
+            slot4:
+              description: Slot 4 para Cartas
+              type: string
+              nullable: true
+              example: null
+            hasDatabaseItem:
+              description: Indica se esse item existe registrado na database oficial do site da publicadora. Quando está true, o site sabe que pode exibir informações adicionais e imagens sobre ele.
+              type: boolean
+              example: true
+            databaseImgPath:
+              description: Link direto da imagem (sprite/ícone) do item hospedado nos servidores da GNJOY, usado para renderizar o ícone do item na interface da web.
+              type: string
+              example: "https://assets.gnjoylatam.com/static/upload/database/item/2025/10/1100003.png"
+            databaseType:
+              description: Categoria do item no banco de dados.
+              type: string
+              example: "consumable"
+        success:
+          type: boolean
+          example: true
+    MarketPriceSearchItem:
+      type: object
+      properties:
+        svrId:
+          description: Código numérico interno que a distribuidora usa para identificar o servidor.
+          type: integer
+          example: 303
+        itemId:
+          description: Código numérico universal do item dentro do banco de dados do Ragnarok Online.
+          type: integer
+          example: 1100003
+        mapId:
+          description: Identificador numérico do mapa onde o personagem do jogador está parado com a loja aberta.
+          type: integer
+          example: 892
+        ssi:
+          description: Shop Sale ID é um identificador único, longo e gerado pelo sistema para aquela loja/transação específica.
+          type: string
+          example: "7650218064285270433"
+        itemName:
+          description: Nome do item traduzido no idioma selecionado.
+          type: string
+          example: "Elixir Vermelho"
+        databaseImgPath:
+          description: Link direto da imagem (sprite/ícone) do item hospedado nos servidores da GNJOY, usado para renderizar o ícone do item na interface da web.
+          type: string
+          example: "https://assets.gnjoylatam.com/static/upload/database/item/2025/10/1100003.png"
+        databaseType:
+          description: Categoria do item no banco de dados.
+          type: string
+          example: "consumable"
+        totalItemCnt:
+          description: Quantidade total de unidades do item que já foram vendidas no servidor.
+          type: integer
+          example: 488542
+        minItemPrice:
+          description: Preço mínimo registrado de venda do item.
+          type: integer
+          example: 1002
+        maxItemPrice:
+          description: Preço máximo registrado de venda do item.
+          type: integer
+          example: 9999999
+        avgItemPrice:
+          description: Preço médio registrado de venda do item
+          type: integer
+          example: 229042
+    MarketPriceSearchPayload:
+      type: object
+      description: Estrutura lógica dos dados de busca no histórico retornados de forma embutida/serializada dentro do payload RSC após o parsing.
+      properties:
+        queryParams:
+          type: object
+          properties:
+            serverType:
+              type: string
+              example: "NIDHOGG"
+            period:
+              type: string
+              example: "ALL"
+            searchWord:
+              type: string
+              example: "elixir vermelho"
+        list:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketPriceSearchItem"
+        totalCount:
+          description: Número de resultados encontrados na busca
+          type: integer
+          example: 1
+    PriceHistoryRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "price"
+        params:
+          type: object
+          properties:
+            itemId:
+              description: Código numérico universal do item dentro do banco de dados do Ragnarok Online.
+              type: integer
+              example: 1100003
+            svrId:
+              description: Código numérico interno que a distribuidora usa para identificar o servidor.
+              type: integer
+              example: 303
+            page:
+              description: Número de páginas de histórico que contém o resultado da busca
+              type: integer
+              example: 1
+            limit:
+              description: Número de itens por página de histórico
+              type: integer
+              example: 10
+            period:
+              description: Período de tempo em que consta o histórico
+              type: string
+              example: "$undefined"
+    PriceHistoryChartItem:
+      type: object
+      properties:
+        nowDate:
+          description: Data do registro no histórico
+          type: string
+          example: "2026-06-11"
+        minItemPrice:
+          description: Preço mínimo registrado nessa data
+          type: integer
+          example: 1396
+        maxItemPrice:
+          description: Preço máximo registrado nessa data
+          type: integer
+          example: 1600
+        avgItemPrice:
+          description: Preço médio registrado nessa data
+          type: integer
+          example: 1422
+    PriceHistoryDayItem:
+      type: object
+      properties:
+        nowDate:
+          description: Data do registro no histórico
+          type: string
+          example: "2026-06-11"
+        minItemPrice:
+          description: Preço mínimo registrado nessa data
+          type: integer
+          example: 1396
+        maxItemPrice:
+          description: Preço máximo registrado nessa data
+          type: integer
+          example: 1600
+        avgItemPrice:
+          description: Preço médio registrado nessa data
+          type: integer
+          example: 1422
+        itemCnt:
+          description: Quantidade de unidades do item que ficaram a venda nesse dia
+          type: integer
+          example: 16700
+        totalCount:
+          description: Quantidade total de dias em que esse item foi vendido que estão registrados no histórico
+          type: integer
+          example: 31
+    PriceHistoryPayload:
+      type: object
+      description: Estrutura lógica dos dados do histórico de preços retornados de forma embutida/serializada dentro do payload RSC após o parsing.
+      properties:
+        data:
+          type: object
+          properties:
+            itemPriceMin:
+              description: Preço mínimo registrado de venda do item
+              type: integer
+              example: 1002
+            itemPriceMax:
+              description: Preço máximo registrado de venda do item
+              type: integer
+              example: 9999999
+            priceDetailChartList:
+              type: array
+              items:
+                $ref: "#/components/schemas/PriceHistoryChartItem"
+            priceDetailDayList:
+              type: array
+              items:
+                $ref: "#/components/schemas/PriceHistoryDayItem"
+        success:
+          type: boolean
+          example: true
