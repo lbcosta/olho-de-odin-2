@@ -74,3 +74,11 @@ Usuários cadastram o nome do Personagem no banco SQLite (`character_name`). Ao 
   - Carrega as lojas ativas instantaneamente sem dados inúteis.
   - Ao expandir uma loja específica (sob demanda via `ssi`), injeta o header `Next-Action` e puxa as coordenadas X/Y.
   - Formata como `/navi {mapName} {x/y}`, copia pro Clipboard do usuário e **cacheia no SQLite atrelado ao ssi**, impedindo requisições repetidas se o usuário clicar várias vezes na mesma loja ativa.
+
+---
+
+## 8. Pipeline de CI/CD e Distribuição Final
+O projeto encerra seu ciclo em um ecossistema de entrega totalmente autônomo via **GitHub Actions**.
+- **Gatilho de Tag**: A esteira de *Build* é ativada unicamente quando o desenvolvedor emite uma nova *Release* (Tag) no GitHub.
+- **Empacotamento (Zero-Setup)**: A Action compila o Node.js e React no binário do Electron para Windows, gerando um `.exe` limpo.
+- **O `.zip` do Jogador**: O `.exe` compilado é unificado junto a um **Manual de Instruções** da aplicação dentro de um pacote `.zip`. O GitHub Actions atacha esse zip automaticamente aos artefatos da Release, pronto para o usuário baixar, descompactar e rodar o aplicativo de forma trivial.

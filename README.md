@@ -21,6 +21,7 @@ Longe de ser apenas um buscador de lojas, o sistema atua como um conselheiro fin
   - **Flipping**: Avisa para não vender (ou comprar e revender) se o mercado sofrer queda de 30% no preço base.
 - 🏪 **Tracker da "Minha Loja"**: Monitoramento de fundo que observa estoques e dispara **Notificações Nativas do Windows** se o usuário realizou uma venda ou se a loja sumiu subitamente do mercado (DC).
 - 📍 **Lazy Loading & Área de Transferência (`/navi`)**: As coordenadas vitais das lojinhas carregam sob-demanda e são despachadas pro Clipboard prontas para serem coladas no chat do jogo.
+- 🚀 **CD Automático (Zero-Setup)**: Pipeline de *GitHub Actions* que compila e empacota o app automaticamente em um executável `.exe` dentro de um `.zip` acompanhado do **Manual de Instruções**, entregando diretamente na mão do usuário final a cada nova *Release*.
 
 ## 🛠️ Stack Tecnológico
 
