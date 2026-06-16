@@ -1,0 +1,47 @@
+/* src/renderer/index.css */
+/* Arquitetura de CSS global: Tailwind (base/components/utilities) + tokens. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-surface text-gray-100 font-sans antialiased;
+    margin: 0;
+    overflow: hidden; /* o layout interno controla o scroll por região */
+  }
+}
+
+@layer components {
+  /* Cartão base reutilizado pelos painéis (Item, Métricas, Watchlist). */
+  .oo-card {
+    @apply rounded-xl border border-surface-border bg-surface-raised p-4 shadow-lg;
+  }
+
+  /* Indicador semântico do Request Log (cor por status). */
+  .oo-log-dot {
+    @apply inline-block h-2.5 w-2.5 rounded-full;
+  }
+  .oo-log-dot--success {
+    @apply bg-log-success;
+  }
+  .oo-log-dot--error {
+    @apply bg-log-error;
+  }
+  .oo-log-dot--pending {
+    @apply bg-log-pending;
+  }
+  .oo-log-dot--progress {
+    @apply bg-log-progress;
+  }
+}

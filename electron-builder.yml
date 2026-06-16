@@ -1,0 +1,36 @@
+# electron-builder.yml
+# Gera um executável portátil (.exe) "zero-setup" para Windows.
+# Sem instaladores complexos: o jogador baixa, extrai o .zip e dá duplo-clique.
+appId: com.olhodeodin.app
+productName: Olho de Odin 2
+copyright: Copyright © 2026 Olho de Odin
+
+directories:
+  output: release
+  buildResources: build
+
+# Empacota o bundle gerado pelo electron-vite (out/) + os módulos de produção.
+files:
+  - out/**/*
+  - package.json
+
+# Reconstrói dependências nativas (better-sqlite3) para o ABI do Electron alvo.
+npmRebuild: true
+
+# O binário nativo do better-sqlite3 não pode ficar dentro do asar.
+asar: true
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**'
+
+win:
+  target:
+    - portable
+  artifactName: ${productName}-${version}-portable.${ext}
+
+portable:
+  # Nome do executável "double-click" entregue ao jogador.
+  artifactName: ${productName}-${version}-portable.${ext}
+
+# Builds locais de desenvolvimento não publicam automaticamente;
+# a publicação é controlada explicitamente pelo workflow de Release.
+publish: null
