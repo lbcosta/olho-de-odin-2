@@ -1,0 +1,61 @@
+# .github/workflows/release.yml
+# Pipeline de distribuição "zero-setup".
+# Dispara EXCLUSIVAMENTE na criação de uma tag de versão (ex: v1.0.0),
+# compila o .exe portátil no Windows, empacota com o Manual de Instruções
+# em um .zip e anexa o pacote à Release do GitHub.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build & Package (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build portable .exe
+        run: npm run build:win
+
+      - name: Package .exe + Manual into a .zip
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          $stage = "release/package"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+          # Copia o executável portátil gerado pelo electron-builder.
+          Get-ChildItem -Path "release" -Filter "*.exe" |
+            Copy-Item -Destination $stage
+
+          # Embute o Manual de Instruções pré-existente na base de código.
+          Copy-Item -Path "docs/MANUAL.md" -Destination "$stage/MANUAL.md"
+
+          $zipPath = "release/OlhoDeOdin2-$version-win.zip"
+          Compress-Archive -Path "$stage/*" -DestinationPath $zipPath -Force
+          Write-Host "Pacote criado: $zipPath"
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/OlhoDeOdin2-*-win.zip
+          fail_on_unmatched_files: true
+          generate_release_notes: true

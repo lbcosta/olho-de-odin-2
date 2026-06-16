@@ -1,0 +1,10 @@
+out
+dist
+release
+node_modules
+package-lock.json
+specs
+
+# Documentos pré-existentes do projeto (conteúdo autoral, fora do escopo de formatação)
+README.md
+CONTEXT.md

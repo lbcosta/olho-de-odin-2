@@ -1,1 +1,28 @@
 /legacy
+
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+release/
+
+# Electron / native
+*.tsbuildinfo
+.vite/
+
+# Local database & logs
+*.db
+*.db-shm
+*.db-wal
+*.log
+olhodeodin.db
+
+# Env & editor
+.env
+.env.*
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
