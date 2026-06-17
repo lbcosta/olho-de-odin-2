@@ -2,7 +2,7 @@
 // Registro central dos handlers IPC, todos tipados pelo contrato @shared/types/ipc.
 // Fase 1: sistema. Fase 2: Perfil. Fase 3: Search/Item/Watchlist/Metrics (GnJoy).
 
-import { app } from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
 import { IpcChannel, type AppInfo } from '@shared/types/ipc'
 import { getDatabase } from '../database'
 import { ProfileService } from '../services/profile/ProfileService'
@@ -26,6 +26,34 @@ function buildAppInfo(): AppInfo {
 function registerSystemHandlers(): void {
   handle(IpcChannel.SystemPing, () => 'pong')
   handle(IpcChannel.SystemGetAppInfo, () => buildAppInfo())
+}
+
+function registerDialogHandlers(): void {
+  handle(IpcChannel.DialogPickSave, async ({ defaultName }) => {
+    const win = BrowserWindow.getFocusedWindow()
+    const options: Electron.SaveDialogOptions = {
+      defaultPath: defaultName ?? 'perfil.json',
+      filters: [{ name: 'Perfil JSON', extensions: ['json'] }],
+    }
+    const result = win
+      ? await dialog.showSaveDialog(win, options)
+      : await dialog.showSaveDialog(options)
+    return { filePath: result.canceled ? null : (result.filePath ?? null) }
+  })
+
+  handle(IpcChannel.DialogPickOpen, async () => {
+    const win = BrowserWindow.getFocusedWindow()
+    const options: Electron.OpenDialogOptions = {
+      properties: ['openFile'],
+      filters: [{ name: 'Perfil JSON', extensions: ['json'] }],
+    }
+    const result = win
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
+    return {
+      filePath: result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0],
+    }
+  })
 }
 
 function registerProfileHandlers(profiles: ProfileService): void {
@@ -67,8 +95,13 @@ function registerMarketHandlers(market: MarketService): void {
   handle(IpcChannel.MetricsCompute, ({ itemId }) => market.computeMetrics(itemId))
 }
 
-/** Registra todos os handlers IPC disponíveis. Chamado uma vez no boot. */
-export function registerIpcHandlers(): void {
+export interface RegisteredServices {
+  market: MarketService
+  profiles: ProfileService
+}
+
+/** Registra todos os handlers IPC e devolve serviços para wiring adicional. */
+export function registerIpcHandlers(): RegisteredServices {
   const db = getDatabase()
   const profiles = new ProfileService(db)
   const cache = new CacheService(db)
@@ -77,6 +110,9 @@ export function registerIpcHandlers(): void {
   const market = new MarketService(queue, client, cache, profiles)
 
   registerSystemHandlers()
+  registerDialogHandlers()
   registerProfileHandlers(profiles)
   registerMarketHandlers(market)
+
+  return { market, profiles }
 }

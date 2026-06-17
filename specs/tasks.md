@@ -61,6 +61,36 @@
 
 ---
 
+## Fase 3.5: Tracker "Minha Loja" e Gerenciamento de Perfis (Incremento)
+
+> **Decisão de roadmap:** durante a Fase 3, optou-se por agrupar em um incremento
+> dedicado duas funcionalidades de alto valor que dependem da base já construída
+> (`MarketService`, `ProfileService` e a UI). Entregue **após a Fase 3 e antes da
+> varredura final de QA (Fase 4)**, mantendo os PRs menores e revisáveis. Cobre o
+> "Tracker da Minha Loja" (architecture §6 / Profile 0003) e a UI de Perfis
+> (Profile 0001/0002), que não couberam no escopo das tarefas T014-T020.
+
+### Módulo: Tracker "Minha Loja" (Engenheiro Back-end)
+- [ ] T026 Implementar a detecção **pura** de mudança da própria loja (Venda vs
+  Disconnect/Sold Out), cruzando `character_name` com as lojas ativas, em
+  `src/main/services/store/StoreTracker.ts`.
+- [ ] T027 Implementar o motor de monitoramento de fundo com **Prioridade Máxima**
+  na fila para os itens marcados `isInMyStore`, com espaçamento de Rate Limit.
+- [ ] T028 [P] Implementar **Notificações Nativas do SO** (Electron `Notification`)
+  em `src/main/notifications.ts` ("Você vendeu X" / "Sua loja sumiu — DC ou Sold Out").
+
+### Módulo: Gerenciamento de Perfis (Engenheiro Front-end)
+- [ ] T029 Implementar a tela `ProfileManager` (CRUD, troca de perfil ativo, Char)
+  consumindo os handlers IPC de Perfil em `src/renderer/components/Profile/ProfileManager.tsx`.
+- [ ] T030 [P] Implementar Import/Export de Perfil via **diálogos nativos**
+  (`dialog:pick-open` / `dialog:pick-save`) ligados ao Backup JSON da Fase 2.
+
+### Testes
+- [ ] T031 [P] Testar detecção de Venda/DC do StoreTracker em `tests/main/storeTracker.spec.ts`.
+- [ ] T032 [P] Testar a tela de Perfis (render/criação) em `tests/renderer/profileManager.spec.tsx`.
+
+---
+
 ## Fase 4: Validação Estrita (Controle de Qualidade / QA)
 
 *Atenção: Os testes devem rodar sob TDD (Red-Green-Refactor) baseados nos Planos de Teste oficiais gerados.*

@@ -9,9 +9,12 @@ import { registerIpcHandlers } from './ipc/registerHandlers'
 import { RequestQueueManager } from './services/gnjoy/RequestQueueManager'
 import { createMainWindow } from './window'
 import { createTray } from './tray'
+import { StoreTracker } from './services/store/StoreTracker'
+import { sendOsNotification } from './notifications'
 import { IpcEvent } from '@shared/types/ipc'
 
 let mainWindow: BrowserWindow | null = null
+let storeTracker: StoreTracker | null = null
 
 /** Encaminha um evento a todas as janelas/renderers vivos. */
 function broadcast(channel: string, payload: unknown): void {
@@ -32,11 +35,20 @@ function bootstrap(): void {
   initDatabase(join(app.getPath('userData'), DB_FILENAME))
   applySchema(getDatabase())
 
-  registerIpcHandlers()
+  const services = registerIpcHandlers()
   bridgeQueueTelemetry()
 
   mainWindow = createMainWindow()
   createTray(() => mainWindow)
+
+  // Tracker "Minha Loja": ciclo de fundo (Prioridade Máxima via fila).
+  // Auto-skip enquanto não houver Char + itens isInMyStore (nenhuma chamada de rede).
+  storeTracker = new StoreTracker(
+    services.profiles,
+    (itemId) => services.market.refreshListings(itemId, 'NIDHOGG'),
+    sendOsNotification,
+  )
+  storeTracker.start()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createMainWindow()
@@ -50,5 +62,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  storeTracker?.stop()
   closeDatabase()
 })
