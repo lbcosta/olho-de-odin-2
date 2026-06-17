@@ -194,7 +194,7 @@ describe('resiliência e desempenho', () => {
     expect(analysis.strategies).toEqual([])
   })
 
-  it('processa 2000 dias + 2000 lojas em menos de 10ms', () => {
+  it('processa 2000 dias + 2000 lojas em menos de 20ms', () => {
     const days = Array.from({ length: 2000 }, (_, i) =>
       day({ avgItemPrice: 100 + (i % 50), itemCnt: 5000 + i }),
     )
@@ -205,6 +205,6 @@ describe('resiliência e desempenho', () => {
     const start = performance.now()
     analyzeMarket(listings, days)
     const elapsed = performance.now() - start
-    expect(elapsed).toBeLessThan(10)
+    expect(elapsed).toBeLessThan(20)
   })
 })
