@@ -101,6 +101,14 @@ export function parseActiveListings(raw: string): ActiveStoreListing[] {
   return findEmbeddedList(raw) as ActiveStoreListing[]
 }
 
+/**
+ * Objeto de dados genérico de uma resposta POST (`{data,success}` → `data`).
+ * Usado para detectar hash `Next-Action` expirado (retorno sem dados de ação).
+ */
+export function parseActionData(raw: string): Record<string, unknown> | null {
+  return findActionData(raw)
+}
+
 /** Resumos agregados da Busca no Histórico (GET market-price). */
 export function parseHistoricalSummaries(raw: string): HistoricalSummary[] {
   return findEmbeddedList(raw) as HistoricalSummary[]

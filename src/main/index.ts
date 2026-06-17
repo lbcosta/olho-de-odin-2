@@ -8,7 +8,10 @@ import { applySchema } from './database/migrate'
 import { registerIpcHandlers } from './ipc/registerHandlers'
 import { RequestQueueManager } from './services/gnjoy/RequestQueueManager'
 import { createMainWindow } from './window'
+import { createTray } from './tray'
 import { IpcEvent } from '@shared/types/ipc'
+
+let mainWindow: BrowserWindow | null = null
 
 /** Encaminha um evento a todas as janelas/renderers vivos. */
 function broadcast(channel: string, payload: unknown): void {
@@ -32,10 +35,11 @@ function bootstrap(): void {
   registerIpcHandlers()
   bridgeQueueTelemetry()
 
-  createMainWindow()
+  mainWindow = createMainWindow()
+  createTray(() => mainWindow)
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+    if (BrowserWindow.getAllWindows().length === 0) mainWindow = createMainWindow()
   })
 }
 

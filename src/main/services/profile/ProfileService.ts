@@ -220,6 +220,32 @@ export class ProfileService {
       .run(enabled ? 1 : 0, profileId, itemId)
   }
 
+  /** Busca um item do catálogo global. */
+  getItem(itemId: number): Item | null {
+    const row = this.db.prepare('SELECT * FROM items WHERE item_id = ?').get(itemId) as
+      | ItemRow
+      | undefined
+    return row
+      ? {
+          itemId: row.item_id,
+          name: row.name,
+          type: row.type,
+          imgPath: row.img_path,
+          updatedAt: row.updated_at,
+        }
+      : null
+  }
+
+  /** Cadastra/atualiza um item no catálogo (sem vincular à Watchlist). */
+  registerItem(item: WatchlistItemInput): void {
+    this.upsertItem(item)
+  }
+
+  /** Atualiza o carimbo de sincronização (`updated_at`) de um item. */
+  touchItem(itemId: number): void {
+    this.db.prepare("UPDATE items SET updated_at = datetime('now') WHERE item_id = ?").run(itemId)
+  }
+
   private upsertItem(item: WatchlistItemInput): void {
     this.db
       .prepare(
