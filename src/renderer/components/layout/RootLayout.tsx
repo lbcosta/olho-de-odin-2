@@ -9,6 +9,7 @@ import { LogViewer } from '../RequestLog/LogViewer'
 import { ToastContainer } from '../ui/Toast'
 import { WatchlistGrid } from '../Watchlist/WatchlistGrid'
 import { ItemDashboard } from '../Item/ItemDashboard'
+import { ProfileManager } from '../Profile/ProfileManager'
 
 export function RootLayout(): React.JSX.Element {
   const { view, navigate } = useNavigation()
@@ -47,7 +48,10 @@ export function RootLayout(): React.JSX.Element {
           </MenuButton>
           <MenuItems className="absolute right-0 z-30 mt-2 w-48 origin-top-right rounded-lg border border-surface-border bg-surface-overlay p-1 shadow-xl focus:outline-none">
             <MenuItem>
-              <button className="w-full rounded-md px-3 py-2 text-left text-sm data-[focus]:bg-surface-raised">
+              <button
+                onClick={() => navigate({ name: 'profiles' })}
+                className="w-full rounded-md px-3 py-2 text-left text-sm data-[focus]:bg-surface-raised"
+              >
                 Gerenciar Perfis
               </button>
             </MenuItem>
@@ -56,7 +60,9 @@ export function RootLayout(): React.JSX.Element {
       </header>
 
       <main className="flex-1 overflow-y-auto">
-        {view.name === 'watchlist' ? <WatchlistGrid /> : <ItemDashboard itemId={view.itemId} />}
+        {view.name === 'watchlist' && <WatchlistGrid />}
+        {view.name === 'item' && <ItemDashboard itemId={view.itemId} />}
+        {view.name === 'profiles' && <ProfileManager />}
       </main>
 
       <LogViewer />

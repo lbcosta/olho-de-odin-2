@@ -26,6 +26,10 @@ export const IpcChannel = {
   SystemPing: 'system:ping',
   SystemGetAppInfo: 'system:get-app-info',
 
+  // Diálogos nativos (Fase 3.5)
+  DialogPickSave: 'dialog:pick-save',
+  DialogPickOpen: 'dialog:pick-open',
+
   // Busca (Fase 3)
   SearchItems: 'search:items',
 
@@ -134,6 +138,12 @@ export interface UpdateProfileRequest {
 export interface IpcContract {
   [IpcChannel.SystemPing]: { request: void; response: 'pong' }
   [IpcChannel.SystemGetAppInfo]: { request: void; response: AppInfo }
+
+  [IpcChannel.DialogPickSave]: {
+    request: { defaultName?: string }
+    response: { filePath: string | null }
+  }
+  [IpcChannel.DialogPickOpen]: { request: void; response: { filePath: string | null } }
 
   [IpcChannel.SearchItems]: { request: SearchQuery; response: SearchResultGroup[] }
 

@@ -3,7 +3,10 @@
 
 import { createContext, useContext, useState, type ReactNode } from 'react'
 
-export type View = { name: 'watchlist' } | { name: 'item'; itemId: number; itemName?: string }
+export type View =
+  | { name: 'watchlist' }
+  | { name: 'item'; itemId: number; itemName?: string }
+  | { name: 'profiles' }
 
 interface NavigationContextValue {
   view: View
