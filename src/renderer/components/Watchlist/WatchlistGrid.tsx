@@ -16,6 +16,7 @@ import {
   formatTimestamp,
   formatZeny,
 } from '../../utils/marketDisplay'
+import { MIN_ITEM_SPACING_MS, watchlistSpacingMs } from '../../utils/watchlistCycle'
 
 type CardState = 'idle' | 'queued' | 'updating'
 interface Card {
@@ -24,17 +25,26 @@ interface Card {
   state: CardState
 }
 
+/** Espera `ms` em passos curtos, interrompível quando o monitoramento desliga. */
+async function interruptibleWait(ms: number, isRunning: () => boolean): Promise<void> {
+  const STEP_MS = 500
+  for (let elapsed = 0; elapsed < ms && isRunning(); elapsed += STEP_MS) {
+    await new Promise((resolve) => setTimeout(resolve, STEP_MS))
+  }
+}
+
 export function WatchlistGrid(): React.JSX.Element {
   const [cards, setCards] = useState<Card[]>([])
   const [loading, setLoading] = useState(true)
   const [masterOn, setMasterOn] = useState(false)
-  const itemIdsRef = useRef<number[]>([])
+  const monitoredIdsRef = useRef<number[]>([])
   const runningRef = useRef(false)
   const { navigate } = useNavigation()
   const { addToast } = useToast()
 
+  // Apenas itens com monitoramento ativo entram no ciclo (pausados são pulados).
   useEffect(() => {
-    itemIdsRef.current = cards.map((c) => c.entry.itemId)
+    monitoredIdsRef.current = cards.filter((c) => c.entry.isMonitoring).map((c) => c.entry.itemId)
   }, [cards])
 
   const loadWatchlist = useCallback(async () => {
@@ -65,47 +75,56 @@ export function WatchlistGrid(): React.JSX.Element {
     void loadWatchlist()
   }, [loadWatchlist])
 
-  const refreshCycle = useCallback(async () => {
+  const runMonitorLoop = useCallback(async () => {
     const api = getApi()
     if (!api) return
-    setCards((prev) => prev.map((c) => ({ ...c, state: 'queued' })))
-    for (const itemId of itemIdsRef.current) {
-      if (!runningRef.current) break
+    const isRunning = () => runningRef.current
+
+    while (isRunning()) {
+      const ids = monitoredIdsRef.current
+      if (ids.length === 0) {
+        await interruptibleWait(MIN_ITEM_SPACING_MS, isRunning)
+        continue
+      }
+      // Espaçamento dinâmico do ciclo: S = max(3s, T/N). Evita re-buscar o
+      // mesmo item em rajada (bug "metralhadora").
+      const spacing = watchlistSpacingMs(ids.length)
       setCards((prev) =>
-        prev.map((c) => (c.entry.itemId === itemId ? { ...c, state: 'updating' } : c)),
+        prev.map((c) => (ids.includes(c.entry.itemId) ? { ...c, state: 'queued' } : c)),
       )
-      try {
-        const details = await api.invoke('item:sync', { itemId, serverType: 'NIDHOGG' })
+      for (const itemId of ids) {
+        if (!isRunning()) break
         setCards((prev) =>
-          prev.map((c) => (c.entry.itemId === itemId ? { ...c, details, state: 'idle' } : c)),
+          prev.map((c) => (c.entry.itemId === itemId ? { ...c, state: 'updating' } : c)),
         )
-      } catch {
-        setCards((prev) =>
-          prev.map((c) => (c.entry.itemId === itemId ? { ...c, state: 'idle' } : c)),
-        )
+        try {
+          const details = await api.invoke('item:sync', { itemId, serverType: 'NIDHOGG' })
+          setCards((prev) =>
+            prev.map((c) => (c.entry.itemId === itemId ? { ...c, details, state: 'idle' } : c)),
+          )
+        } catch {
+          setCards((prev) =>
+            prev.map((c) => (c.entry.itemId === itemId ? { ...c, state: 'idle' } : c)),
+          )
+        }
+        if (!isRunning()) break
+        await interruptibleWait(spacing, isRunning)
       }
     }
   }, [])
 
-  // Master Switch: liga/desliga o ciclo contínuo de polling.
+  // Master Switch: liga/desliga o ciclo de monitoramento espaçado.
   useEffect(() => {
     if (!masterOn) {
       runningRef.current = false
       return
     }
     runningRef.current = true
-    let cancelled = false
-    void (async () => {
-      while (runningRef.current && !cancelled) {
-        await refreshCycle()
-        await new Promise((r) => setTimeout(r, 1000))
-      }
-    })()
+    void runMonitorLoop()
     return () => {
-      cancelled = true
       runningRef.current = false
     }
-  }, [masterOn, refreshCycle])
+  }, [masterOn, runMonitorLoop])
 
   async function remove(itemId: number): Promise<void> {
     const api = getApi()

@@ -34,6 +34,7 @@ import {
   parseStoreLocation,
 } from '../gnjoy/parser'
 import { analyzeMarket } from '../metrics/SalesMetrics'
+import { MARKET_STORE_TYPE } from '@shared/marketScope'
 import type { CacheService } from '../cache/CacheService'
 import type { ProfileService } from '../profile/ProfileService'
 import { BulkImportService } from '../search/BulkImport'
@@ -124,7 +125,7 @@ export class MarketService {
   async syncItem(
     itemId: number,
     serverType: ServerType,
-    storeType: StoreType = 'SELL',
+    storeType: StoreType = MARKET_STORE_TYPE,
   ): Promise<ItemDetails> {
     const item = this.profiles.getItem(itemId)
     if (!item) throw new Error(`Item ${itemId} não cadastrado.`)
@@ -168,7 +169,7 @@ export class MarketService {
   async refreshListings(
     itemId: number,
     serverType: ServerType,
-    storeType: StoreType = 'SELL',
+    storeType: StoreType = MARKET_STORE_TYPE,
   ): Promise<ActiveStoreListing[]> {
     const item = this.profiles.getItem(itemId)
     if (!item) return []
@@ -223,7 +224,7 @@ export class MarketService {
   bulkImport(filePath: string): { queued: number } {
     const importer = new BulkImportService(this.queue, async (name) => {
       const groups = await this.searchItems(
-        { searchWord: name, serverType: 'NIDHOGG', storeType: 'SELL' },
+        { searchWord: name, serverType: 'NIDHOGG', storeType: MARKET_STORE_TYPE },
         'LOW',
       )
       if (groups[0]) this.addToWatchlist(groups[0].itemId)
