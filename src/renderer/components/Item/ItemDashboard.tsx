@@ -14,6 +14,7 @@ import { SkeletonCard } from '../ui/Skeleton'
 import {
   STATUS_DISPLAY,
   STRATEGY_DISPLAY,
+  formatRelativeTime,
   formatTimestamp,
   formatZeny,
 } from '../../utils/marketDisplay'
@@ -111,8 +112,8 @@ export function ItemDashboard({ itemId }: { itemId: number }): React.JSX.Element
               <p className="text-xs text-gray-400">
                 {item.type || 'item'} · #{item.itemId}
               </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Última sincronização: {formatTimestamp(details.updatedAt)}
+              <p className="mt-1 text-xs text-gray-500" title={formatTimestamp(details.updatedAt)}>
+                Última sincronização: {formatRelativeTime(details.updatedAt)}
               </p>
             </div>
           </div>

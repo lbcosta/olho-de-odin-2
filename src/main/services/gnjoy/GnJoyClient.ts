@@ -59,24 +59,19 @@ export class GnJoyClient {
   /** Executa um POST (Server Action) com auto-renew do Next-Action. */
   async post(endpoint: GnJoyEndpoint, priority: RequestPriority = 'HIGH'): Promise<string> {
     try {
-      const text = await this.enqueuePost(endpoint, priority)
-      if (parseActionData(text) !== null) return text
-      // Resposta OK porém sem dados de ação → provável hash expirado.
+      return await this.enqueuePost(endpoint, priority)
     } catch (error) {
+      // Sem um GET prévio não há sessão para renovar — propaga o erro original.
       if (!this.lastGetUrl) throw error
-    }
-
-    if (!this.lastGetUrl) {
-      throw new GnJoyError('Resposta inválida e sem GET prévio para renovar a sessão.')
     }
 
     // Auto-renew: refaz o GET (atualiza Next-Action) e repete o POST uma vez.
     await this.enqueueRenew(priority)
-    const retry = await this.enqueuePost(endpoint, priority)
-    if (parseActionData(retry) === null) {
+    try {
+      return await this.enqueuePost(endpoint, priority)
+    } catch {
       throw new GnJoyError('Falha ao renovar a sessão Next-Action.')
     }
-    return retry
   }
 
   /** Hash Next-Action atual (volátil). Exposto para diagnóstico/testes. */
@@ -85,12 +80,20 @@ export class GnJoyClient {
   }
 
   private enqueuePost(endpoint: GnJoyEndpoint, priority: RequestPriority): Promise<string> {
-    return this.queue.enqueue(() => this.rawPost(endpoint), {
-      method: 'POST',
-      path: endpoint.path,
-      humanAction: endpoint.humanAction,
-      priority,
-    })
+    return this.queue.enqueue(
+      async () => {
+        const text = await this.rawPost(endpoint)
+        // HTTP 200 porém sem dados de ação ⇒ hash Next-Action expirado. Tratamos
+        // como ERRO dentro da tarefa (linha vermelha no Request Log, conforme a
+        // spec 0003) para disparar o auto-renew e dar visibilidade da falha —
+        // em vez de a fila registrar um enganoso "SUCCESS 200".
+        if (parseActionData(text) === null) {
+          throw new GnJoyError('Resposta sem dados de ação (hash Next-Action expirado).')
+        }
+        return text
+      },
+      { method: 'POST', path: endpoint.path, humanAction: endpoint.humanAction, priority },
+    )
   }
 
   private enqueueRenew(priority: RequestPriority): Promise<string> {

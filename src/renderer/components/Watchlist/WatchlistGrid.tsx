@@ -13,6 +13,7 @@ import { SkeletonCard } from '../ui/Skeleton'
 import {
   STATUS_DISPLAY,
   STRATEGY_DISPLAY,
+  formatRelativeTime,
   formatTimestamp,
   formatZeny,
 } from '../../utils/marketDisplay'
@@ -41,6 +42,14 @@ export function WatchlistGrid(): React.JSX.Element {
   const runningRef = useRef(false)
   const { navigate } = useNavigation()
   const { addToast } = useToast()
+
+  // Re-render periódico (30s) para manter os tempos relativos do "Sync" frescos
+  // mesmo com o monitoramento desligado (sem ele, "agora mesmo" congelaria).
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
 
   // Apenas itens com monitoramento ativo entram no ciclo (pausados são pulados).
   useEffect(() => {
@@ -269,8 +278,8 @@ function WatchlistCard({
           ))}
         </div>
         {details && (
-          <p className="mt-2 text-[10px] text-gray-500">
-            Sync: {formatTimestamp(details.updatedAt)}
+          <p className="mt-2 text-[10px] text-gray-500" title={formatTimestamp(details.updatedAt)}>
+            Sync: {formatRelativeTime(details.updatedAt)}
           </p>
         )}
       </button>

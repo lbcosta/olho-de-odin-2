@@ -139,6 +139,12 @@ export class MarketService {
     let history: PriceHistory | null = null
     const svrId = listings[0]?.svrId
     if (svrId !== undefined) {
+      // O histórico detalhado é uma Server Action da página `market-price`.
+      // É preciso visitar (GET) essa MESMA página antes do POST para capturar o
+      // hash Next-Action correto: o hash da busca em `trading` não é válido para
+      // a ação de preço e ainda condenaria o auto-renew a reabrir a página
+      // errada (causa do "Falha ao renovar a sessão Next-Action").
+      await this.client.get(searchHistoryEndpoint({ searchWord: item.name, serverType }), 'HIGH')
       const priceRaw = await this.client.post(priceHistoryEndpoint({ itemId, svrId }), 'HIGH')
       history = parsePriceHistory(priceRaw)
     }

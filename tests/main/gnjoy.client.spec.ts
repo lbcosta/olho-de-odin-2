@@ -87,4 +87,27 @@ describe('GnJoyClient — sessão Next-Action', () => {
     expect(parseStoreLocation(text)?.mapName).toBe('prt_mk.gat')
     expect(calls).toHaveLength(4)
   })
+
+  it('registra ERRO no log e propaga quando a renovação também falha (visibilidade)', async () => {
+    // POST 200 porém sem dados de ação = hash expirado. NÃO deve aparecer como
+    // "SUCCESS 200" no Request Log; cada tentativa é uma linha de ERRO.
+    const { impl } = mockFetch([
+      { body: `0:{"k":"${HASH1}"}` }, // GET inicial
+      { body: '<html>200 sem acao</html>' }, // POST #1: 200 inválido
+      { body: `0:{"k":"${HASH2}"}` }, // renew GET
+      { body: '<html>200 sem acao</html>' }, // POST #2: ainda inválido
+    ])
+    const queue = RequestQueueManager.getInstance()
+    const errorMethods: string[] = []
+    queue.on('log', (e) => {
+      if (e.status === 'ERROR') errorMethods.push(e.method)
+    })
+    const client = new GnJoyClient(queue, impl)
+
+    await client.get(SEARCH)
+    await expect(client.post(STORE)).rejects.toThrow('Falha ao renovar a sessão Next-Action.')
+
+    // Ambos os POSTs (hash expirado) viraram linhas vermelhas no log, não 200.
+    expect(errorMethods).toEqual(['POST', 'POST'])
+  })
 })
