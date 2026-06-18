@@ -14,8 +14,22 @@ Para receber o JSON embutido na árvore RSC (ao invés de pesados arquivos HTML 
   - `Next-Action: <hash_da_acao>`
 
 ### A Extração Dinâmica do `Next-Action`
-O hash necessário para as requisições POST é um identificador que muda a cada atualização do site da desenvolvedora. 
-Para resolver esse problema:
-1. O Client realiza o **GET inicial** de busca.
-2. No corpo da resposta RSC, ele isola as linhas pelo seu prefixo numérico (ex: `10:` para resultados). O parser **deleta o prefixo** (tudo até o primeiro dois-pontos) e executa um `JSON.parse` nativo no restante da linha. **É expressamente proibido usar Regex** para extrair chaves, pois caracteres de lojas (vírgulas, aspas) quebram a lógica.
-3. O Client persiste a chave de Server Action `Next-Action` extraída do JSON e a injeta nas consultas subsequentes de detalhamento (Lazy Loading).
+O hash necessário para as requisições POST é um identificador que muda a cada
+atualização (deploy) do site da desenvolvedora.
+
+**Correção (confirmada por captura ao vivo da API — Rodada 3 de bugfix):** a
+suposição original de que o hash viria embutido no corpo RSC do GET (como um
+hex de 40 caracteres) estava **errada** — o corpo do GET não contém o hash em
+nenhum formato. O mecanismo real:
+1. O Client realiza o **GET inicial** de busca. No corpo da resposta RSC, ele
+   localiza (sem Regex — só `indexOf`) os caminhos de chunk JS referenciados
+   pela página (`static/chunks/*.js`).
+2. O Client busca cada chunk até encontrar a chamada
+   `createServerReference("<id>", ...)` — o ID embutido ali é o hash real. Seu
+   comprimento **não é fixo** (varia por build/ação; não assumir 40 chars).
+3. Há **uma única Server Action compartilhada** entre as ações de Lazy Load
+   (loja/item/histórico de preço) — o despacho interno é feito pelo campo
+   `type` do payload, não por rota/página. O mesmo hash funciona em qualquer
+   página que referencie o chunk.
+4. O Client cacheia o hash (estável até o próximo deploy) e o injeta no header
+   `Next-Action` de toda requisição POST subsequente.

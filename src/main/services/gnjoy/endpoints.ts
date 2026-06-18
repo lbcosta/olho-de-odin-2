@@ -97,7 +97,12 @@ export function itemDetailEndpoint(params: {
   }
 }
 
-/** POST — Histórico de preço detalhado (gráficos / Média Ponderada). */
+/**
+ * POST — Histórico de preço detalhado (gráficos / Média Ponderada).
+ * A Server Action é COMPARTILHADA entre store/item/price (despachada por
+ * `params.type`), por isso posta-se na MESMA rota `trading` da busca ativa que
+ * a precede — não em `market-price` (confirmado via captura real da API).
+ */
 export function priceHistoryEndpoint(params: {
   itemId: number
   svrId: number
@@ -106,8 +111,8 @@ export function priceHistoryEndpoint(params: {
 }): GnJoyEndpoint {
   return {
     method: 'POST',
-    url: `${GNJOY_BASE_URL}${marketPricePath()}`,
-    path: `${marketPricePath()} [price ${params.itemId}]`,
+    url: `${GNJOY_BASE_URL}${tradingPath()}`,
+    path: `${tradingPath()} [price ${params.itemId}]`,
     humanAction: 'Atualizando histórico de preços...',
     payload: [
       {

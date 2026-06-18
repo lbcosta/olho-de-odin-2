@@ -62,4 +62,31 @@ describe('LogViewer', () => {
 
     expect(container.querySelector('.oo-log-dot--error')).toBeTruthy()
   })
+
+  it('mostra a ação amigável e colore o texto por status (Problema 2)', () => {
+    setupApi()
+    const { container } = render(<LogViewer />)
+    fireEvent.click(screen.getByRole('button', { expanded: false }))
+
+    act(() => {
+      logCb?.({ ...entry(1, 'SUCCESS'), humanAction: 'Buscando "elixir" no mercado...' })
+    })
+
+    // Aparece no cabeçalho colapsado E na linha expandida (consistência).
+    expect(screen.getAllByText('Buscando "elixir" no mercado...').length).toBeGreaterThan(0)
+    expect(container.querySelector('.text-log-success')).toBeTruthy()
+  })
+
+  it('linha de ERROR fica vermelha no texto, não verde', () => {
+    setupApi()
+    const { container } = render(<LogViewer />)
+    fireEvent.click(screen.getByRole('button', { expanded: false }))
+
+    act(() => {
+      logCb?.(entry(1, 'ERROR'))
+    })
+
+    expect(container.querySelector('.text-log-error')).toBeTruthy()
+    expect(container.querySelector('.text-log-success')).toBeNull()
+  })
 })
