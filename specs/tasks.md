@@ -96,23 +96,23 @@
 *Atenção: Os testes devem rodar sob TDD (Red-Green-Refactor) baseados nos Planos de Teste oficiais gerados.*
 
 ### Testes Back-end & Integração
-- [ ] T021 [P] Executar testes do parser *Anti-Regex* e concorrência da Queue no GnJoy Client em `tests/main/gnjoy.spec.ts`.
-- [ ] T022 [P] Executar testes de Transações ACID e Foreign Keys do SQLite em `tests/main/profile.spec.ts`.
-- [ ] T023 [P] Executar testes limiares (Thresholds) de divisores em `SalesMetrics.ts` em `tests/main/metrics.spec.ts`.
+- [x] T021 [P] Executar testes do parser *Anti-Regex* e concorrência da Queue no GnJoy Client em `tests/main/gnjoy.spec.ts` (`gnjoy.client/parser/queue.spec.ts`).
+- [x] T022 [P] Executar testes de Transações ACID e Foreign Keys do SQLite em `tests/main/profile.spec.ts`.
+- [x] T023 [P] Executar testes limiares (Thresholds) de divisores em `SalesMetrics.ts` em `tests/main/metrics.spec.ts`.
 
 ### Testes Front-end & UI
-- [ ] T024 [P] Executar testes do limitador array `slice(-50)` de Memory Leak na Fila UI do Request Log em `tests/renderer/requestLog.spec.ts`.
-- [ ] T025 [P] Executar testes de Double-click (Spamming) e UI Skeletons em `tests/renderer/uiComponents.spec.ts`.
+- [x] T024 [P] Executar testes do limitador array `slice(-50)` de Memory Leak na Fila UI do Request Log em `tests/renderer/requestLog.spec.ts` (`logViewer.spec.tsx` + `logTranslator.spec.ts`).
+- [x] T025 [P] Executar testes de Double-click (Spamming) e UI Skeletons em `tests/renderer/uiComponents.spec.ts` (`skeleton/searchBar/watchlistGrid/profileManager/app.spec.tsx`).
 
 ### Dívida Técnica (correções adiadas)
-- [ ] T033 **Bug #2b** — Mover o motor de *polling* da Watchlist do *Renderer* para o
+- [x] T033 **Bug #2b** — Mover o motor de *polling* da Watchlist do *Renderer* para o
   *Main Process*, unificando-o com o `StoreTracker`. Resolve dois problemas
   identificados em testes manuais da Fase 3: (a) *timers* do Chromium são
   estrangulados com a janela minimizada (conflita com "monitorar em segundo
   plano" da spec), e (b) *polling* duplicado (WatchlistGrid + StoreTracker
   consultam os mesmos itens de forma independente). A correção contida do
   cadência/skip de pausados (Bug #2a) foi entregue na Fase 3; este item é a
-  rearquitetura definitiva.
+  rearquitetura definitiva — ver Rodada 4 abaixo.
 
 ---
 
@@ -164,3 +164,33 @@ de rede real (sessão teleportada para a CLI local):
 - [x] Specs corrigidas: `0001-Arquitetura Base e Extracao de Dados.md`,
   `0002-Endpoints de Mercado e Historico.md`, `Regras de Implementacao.md`
   (o mecanismo documentado originalmente nunca foi validado contra a API real).
+
+### Rodada 4 — Fase 4 (QA): varredura de testes + Bug #2b (rearquitetura definitiva)
+- [x] **Varredura de QA** — suíte completa (117 testes), `typecheck` e `lint`
+  executados e verdes antes e depois desta rodada; T021-T025 cobertos pelos
+  specs já existentes (granularizados por módulo em vez de um arquivo único
+  por tarefa).
+- [x] **Bug #2b (causa raiz)** — o motor de polling da Watchlist vivia em
+  duplicidade: `WatchlistGrid` (Renderer, sujeito ao *throttling* de timers do
+  Chromium quando a janela é minimizada) **e** `StoreTracker.start()` (Main,
+  `setInterval` próprio de 60s) consultavam os mesmos itens de forma
+  independente.
+- [x] **Fix** — novo `WatchlistMonitor` (`src/main/services/watchlist/`)
+  unifica o ciclo inteiro no Main Process: uma única busca por item por
+  ciclo, com o espaçamento dinâmico `S = max(3s, T/N)` (`@shared/watchlistCycle`,
+  movido de `renderer/utils` por ser agora consumido pelo Main). `StoreTracker`
+  perdeu seu agendamento próprio (`start`/`stop`/`runCycle`/`setInterval`) e
+  passou a expor só `track(itemId, listings)`, alimentado pelos listings que o
+  próprio ciclo já buscou — **zero fetch extra** para itens `isInMyStore`.
+- [x] **IPC** — Master Switch migrou para o Main
+  (`watchlist:set-monitoring-master` / `watchlist:get-monitoring-master`); o
+  progresso por-card (Na Fila/Atualizando/dados sincronizados) chega ao
+  Renderer via novo evento push `event:watchlist-card`. `WatchlistGrid` ficou
+  puramente reativo (sem `setInterval`/loop próprio).
+- [x] **Decisão de design (trade-off assumido)** — a detecção de Venda/DC de
+  um item `isInMyStore` agora só roda enquanto ele estiver sendo ativamente
+  monitorado (Master Switch ligado e o item não pausado individualmente),
+  abandonando o comportamento anterior de o `StoreTracker` rodar sempre em
+  paralelo. Pausar voltou a significar, de forma consistente, "parar de
+  consultar a rede para este item" — sem isso, a unificação não eliminaria de
+  fato o polling duplicado.

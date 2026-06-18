@@ -68,46 +68,40 @@ describe('detectStoreChange', () => {
 function profilesStub(characterName: string | null): ProfileService {
   return {
     getActive: () => ({ id: 1, name: 'P', characterName, createdAt: '', updatedAt: '' }),
-    listWatchlist: () => [
-      { profileId: 1, itemId: 1, isMonitoring: true, isInMyStore: true, createdAt: '' },
-    ],
   } as unknown as ProfileService
 }
 
-describe('StoreTracker.runCycle', () => {
-  it('notifica VENDA quando o estoque diminui entre ciclos', async () => {
-    const stocks = [100, 60]
-    let call = 0
-    const refresh = vi.fn(async () => [listing('Odin', stocks[call++])])
+describe('StoreTracker.track (alimentado pelo ciclo unificado da Watchlist — Bug #2b)', () => {
+  it('notifica VENDA quando o estoque diminui entre chamadas', () => {
     const notify = vi.fn()
-    const tracker = new StoreTracker(profilesStub('Odin'), refresh, notify)
+    const tracker = new StoreTracker(profilesStub('Odin'), notify)
 
-    await tracker.runCycle() // first-seen (sem alerta)
+    tracker.track(1, [listing('Odin', 100)]) // first-seen (sem alerta)
     expect(notify).not.toHaveBeenCalled()
-    await tracker.runCycle() // venda
+    tracker.track(1, [listing('Odin', 60)]) // venda
 
     expect(notify).toHaveBeenCalledTimes(1)
     expect(notify.mock.calls[0][0].body).toContain('40')
   })
 
-  it('notifica DESAPARECIMENTO (DC ou Sold Out)', async () => {
-    const responses: ActiveStoreListing[][] = [[listing('Odin', 100)], []]
-    let call = 0
-    const refresh = vi.fn(async () => responses[call++])
+  it('notifica DESAPARECIMENTO (DC ou Sold Out)', () => {
     const notify = vi.fn()
-    const tracker = new StoreTracker(profilesStub('Odin'), refresh, notify)
+    const tracker = new StoreTracker(profilesStub('Odin'), notify)
 
-    await tracker.runCycle()
-    await tracker.runCycle()
+    tracker.track(1, [listing('Odin', 100)])
+    tracker.track(1, [])
 
     expect(notify).toHaveBeenCalledTimes(1)
     expect(notify.mock.calls[0][0].title).toMatch(/sumiu/i)
   })
 
-  it('não faz chamadas de rede sem Char configurado', async () => {
-    const refresh = vi.fn()
-    const tracker = new StoreTracker(profilesStub(null), refresh, vi.fn())
-    await tracker.runCycle()
-    expect(refresh).not.toHaveBeenCalled()
+  it('não processa (nem dispara notificação) sem Char configurado', () => {
+    const notify = vi.fn()
+    const tracker = new StoreTracker(profilesStub(null), notify)
+
+    tracker.track(1, [listing('Odin', 100)])
+    tracker.track(1, [])
+
+    expect(notify).not.toHaveBeenCalled()
   })
 })

@@ -1,11 +1,12 @@
 // src/renderer/components/Watchlist/WatchlistGrid.tsx
 // Dashboard da Watchlist (T020): grid de cards consumindo o IPC de forma
-// assíncrona. O Master Switch liga o ciclo de polling; cada card reflete seu
-// estado na fila (Na Fila / Atualizando), respeitando o Rate Limit (3s/req).
+// assíncrona. O Master Switch liga o ciclo de polling, que roda no Main
+// Process (Bug #2b — `WatchlistMonitor`); cada card reflete seu estado via
+// evento push (Na Fila / Atualizando), respeitando o Rate Limit (3s/req).
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { WatchlistEntry } from '@shared/types/domain'
-import type { ItemDetails } from '@shared/types/ipc'
+import { IpcEvent, type ItemDetails, type WatchlistCardState } from '@shared/types/ipc'
 import { getApi } from '../../hooks/useApi'
 import { useNavigation } from '../../contexts/NavigationContext'
 import { useToast } from '../../contexts/ToastContext'
@@ -17,36 +18,42 @@ import {
   formatZenyOrDash,
 } from '../../utils/marketDisplay'
 import { RelativeTime } from '../ui/RelativeTime'
-import { MIN_ITEM_SPACING_MS, watchlistSpacingMs } from '../../utils/watchlistCycle'
 
-type CardState = 'idle' | 'queued' | 'updating'
 interface Card {
   entry: WatchlistEntry
   details: ItemDetails | null
-  state: CardState
-}
-
-/** Espera `ms` em passos curtos, interrompível quando o monitoramento desliga. */
-async function interruptibleWait(ms: number, isRunning: () => boolean): Promise<void> {
-  const STEP_MS = 500
-  for (let elapsed = 0; elapsed < ms && isRunning(); elapsed += STEP_MS) {
-    await new Promise((resolve) => setTimeout(resolve, STEP_MS))
-  }
+  state: WatchlistCardState
 }
 
 export function WatchlistGrid(): React.JSX.Element {
   const [cards, setCards] = useState<Card[]>([])
   const [loading, setLoading] = useState(true)
   const [masterOn, setMasterOn] = useState(false)
-  const monitoredIdsRef = useRef<number[]>([])
-  const runningRef = useRef(false)
   const { navigate } = useNavigation()
   const { addToast } = useToast()
 
-  // Apenas itens com monitoramento ativo entram no ciclo (pausados são pulados).
+  // Reflete o Master Switch já ativo no Main (sobrevive a remontagens do componente).
   useEffect(() => {
-    monitoredIdsRef.current = cards.filter((c) => c.entry.isMonitoring).map((c) => c.entry.itemId)
-  }, [cards])
+    const api = getApi()
+    if (!api) return
+    api
+      .invoke('watchlist:get-monitoring-master')
+      .then(({ enabled }) => setMasterOn(enabled))
+      .catch(() => {})
+  }, [])
+
+  // Progresso do ciclo de polling do Main: estado por-card + dados sincronizados.
+  useEffect(() => {
+    const api = getApi()
+    if (!api) return
+    return api.on(IpcEvent.WatchlistCard, ({ itemId, state, details }) => {
+      setCards((prev) =>
+        prev.map((c) =>
+          c.entry.itemId === itemId ? { ...c, state, details: details ?? c.details } : c,
+        ),
+      )
+    })
+  }, [])
 
   const loadWatchlist = useCallback(async () => {
     const api = getApi()
@@ -60,7 +67,7 @@ export function WatchlistGrid(): React.JSX.Element {
       const loaded = await Promise.all(
         entries.map(async (entry) => ({
           entry,
-          state: 'idle' as CardState,
+          state: 'idle' as WatchlistCardState,
           details: await api
             .invoke('item:get-details', { itemId: entry.itemId, serverType: 'NIDHOGG' })
             .catch(() => null),
@@ -76,56 +83,14 @@ export function WatchlistGrid(): React.JSX.Element {
     void loadWatchlist()
   }, [loadWatchlist])
 
-  const runMonitorLoop = useCallback(async () => {
+  // Master Switch: liga/desliga o ciclo de monitoramento espaçado no Main.
+  async function toggleMaster(): Promise<void> {
     const api = getApi()
     if (!api) return
-    const isRunning = () => runningRef.current
-
-    while (isRunning()) {
-      const ids = monitoredIdsRef.current
-      if (ids.length === 0) {
-        await interruptibleWait(MIN_ITEM_SPACING_MS, isRunning)
-        continue
-      }
-      // Espaçamento dinâmico do ciclo: S = max(3s, T/N). Evita re-buscar o
-      // mesmo item em rajada (bug "metralhadora").
-      const spacing = watchlistSpacingMs(ids.length)
-      setCards((prev) =>
-        prev.map((c) => (ids.includes(c.entry.itemId) ? { ...c, state: 'queued' } : c)),
-      )
-      for (const itemId of ids) {
-        if (!isRunning()) break
-        setCards((prev) =>
-          prev.map((c) => (c.entry.itemId === itemId ? { ...c, state: 'updating' } : c)),
-        )
-        try {
-          const details = await api.invoke('item:sync', { itemId, serverType: 'NIDHOGG' })
-          setCards((prev) =>
-            prev.map((c) => (c.entry.itemId === itemId ? { ...c, details, state: 'idle' } : c)),
-          )
-        } catch {
-          setCards((prev) =>
-            prev.map((c) => (c.entry.itemId === itemId ? { ...c, state: 'idle' } : c)),
-          )
-        }
-        if (!isRunning()) break
-        await interruptibleWait(spacing, isRunning)
-      }
-    }
-  }, [])
-
-  // Master Switch: liga/desliga o ciclo de monitoramento espaçado.
-  useEffect(() => {
-    if (!masterOn) {
-      runningRef.current = false
-      return
-    }
-    runningRef.current = true
-    void runMonitorLoop()
-    return () => {
-      runningRef.current = false
-    }
-  }, [masterOn, runMonitorLoop])
+    const enabled = !masterOn
+    await api.invoke('watchlist:set-monitoring-master', { enabled })
+    setMasterOn(enabled)
+  }
 
   async function remove(itemId: number): Promise<void> {
     const api = getApi()
@@ -158,7 +123,7 @@ export function WatchlistGrid(): React.JSX.Element {
           <button
             role="switch"
             aria-checked={masterOn}
-            onClick={() => setMasterOn((v) => !v)}
+            onClick={() => void toggleMaster()}
             className={`relative h-6 w-11 rounded-full transition ${masterOn ? 'bg-odin-500' : 'bg-surface-overlay'}`}
           >
             <span

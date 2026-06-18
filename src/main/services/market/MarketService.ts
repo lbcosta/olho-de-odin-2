@@ -162,28 +162,6 @@ export class MarketService {
     return loc
   }
 
-  /**
-   * Atualiza apenas as lojas ativas do item (busca, sem histórico) com
-   * Prioridade Máxima — usado pelo Tracker "Minha Loja".
-   */
-  async refreshListings(
-    itemId: number,
-    serverType: ServerType,
-    storeType: StoreType = MARKET_STORE_TYPE,
-  ): Promise<ActiveStoreListing[]> {
-    const item = this.profiles.getItem(itemId)
-    if (!item) return []
-    const raw = await this.client.get(
-      searchActiveEndpoint({ searchWord: item.name, serverType, storeType }),
-      'HIGH',
-    )
-    const listings = parseActiveListings(raw).filter((l) => l.itemId === itemId)
-    const previous = this.cache.get<ItemCacheEntry>(itemKey(itemId))
-    this.cache.set(itemKey(itemId), { listings, history: previous?.value.history ?? null })
-    this.profiles.touchItem(itemId)
-    return listings
-  }
-
   computeMetrics(itemId: number): MarketAnalysis {
     const cached = this.cache.get<ItemCacheEntry>(itemKey(itemId))
     return analyzeMarket(

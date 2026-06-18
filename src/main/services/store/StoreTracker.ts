@@ -1,7 +1,9 @@
 // src/main/services/store/StoreTracker.ts
 // Tracker "Minha Loja" (architecture §6 / Profile 0003): cruza o nome do
 // personagem com as lojas ativas para detectar Vendas e Desaparecimento (DC vs
-// Sold Out). A detecção é PURA (testável); o motor agenda ciclos e notifica.
+// Sold Out). A detecção é PURA (testável); quem alimenta os listings é o
+// ciclo unificado da Watchlist (`WatchlistMonitor`, Bug #2b) — este tracker
+// não busca dados na rede por conta própria, evitando o polling duplicado.
 
 import type { ActiveStoreListing } from '@shared/types/domain'
 import type { ProfileService } from '../profile/ProfileService'
@@ -45,42 +47,30 @@ export interface StoreNotification {
   body: string
 }
 export type Notifier = (notification: StoreNotification) => void
-export type ListingsRefresher = (itemId: number) => Promise<ActiveStoreListing[]>
 
 export class StoreTracker {
   private readonly lastStock = new Map<number, number>()
-  private timer: ReturnType<typeof setInterval> | null = null
-  private cycleRunning = false
 
   constructor(
     private readonly profiles: ProfileService,
-    private readonly refresh: ListingsRefresher,
     private readonly notify: Notifier,
   ) {}
 
-  /** Executa um ciclo de verificação dos itens marcados como "Minha Loja". */
-  async runCycle(): Promise<void> {
-    const profile = this.profiles.getActive()
-    const characterName = profile?.characterName?.trim()
-    if (!profile || !characterName) return // sem Char => nada a rastrear (sem rede)
-
-    const tracked = this.profiles.listWatchlist(profile.id).filter((w) => w.isInMyStore)
-    for (const entry of tracked) {
-      let listings: ActiveStoreListing[]
-      try {
-        listings = await this.refresh(entry.itemId)
-      } catch {
-        continue // falha de rede não interrompe o ciclo (resiliência)
-      }
-      this.applyChange(
-        entry.itemId,
-        detectStoreChange({
-          characterName,
-          listings,
-          previousStock: this.lastStock.get(entry.itemId) ?? null,
-        }),
-      )
-    }
+  /**
+   * Aplica listings já buscados (pelo ciclo da Watchlist) à detecção de
+   * Venda/DC de `itemId`. Sem Char configurado, é um no-op silencioso.
+   */
+  track(itemId: number, listings: ActiveStoreListing[]): void {
+    const characterName = this.profiles.getActive()?.characterName?.trim()
+    if (!characterName) return
+    this.applyChange(
+      itemId,
+      detectStoreChange({
+        characterName,
+        listings,
+        previousStock: this.lastStock.get(itemId) ?? null,
+      }),
+    )
   }
 
   private applyChange(itemId: number, change: StoreChange): void {
@@ -106,25 +96,6 @@ export class StoreTracker {
         break
       case 'absent':
         break
-    }
-  }
-
-  /** Inicia o ciclo periódico (sem sobreposição de execuções). */
-  start(intervalMs = 60_000): void {
-    if (this.timer) return
-    this.timer = setInterval(() => {
-      if (this.cycleRunning) return
-      this.cycleRunning = true
-      void this.runCycle().finally(() => {
-        this.cycleRunning = false
-      })
-    }, intervalMs)
-  }
-
-  stop(): void {
-    if (this.timer) {
-      clearInterval(this.timer)
-      this.timer = null
     }
   }
 }
