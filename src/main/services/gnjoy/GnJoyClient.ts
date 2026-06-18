@@ -1,22 +1,23 @@
 // src/main/services/gnjoy/GnJoyClient.ts
 // Orquestrador de rede da GnJoy: amarra a Fila Global, o Parser Anti-Regex e a
-// sessão dinâmica `Next-Action`. Toda chamada passa pelo RequestQueueManager
-// (rate limit de 3000ms). `fetch` é injetável para testes.
+// descoberta da Server Action `Next-Action`. Toda chamada passa pelo
+// RequestQueueManager (rate limit de 3000ms). `fetch` é injetável para testes.
 //
-// Sessão Next-Action POR ROTA:
-//  - O hash é um Server Action ID do Next.js amarrado a uma PÁGINA. Um POST só
-//    é válido com o hash capturado num GET DA MESMA rota (pathname).
-//  - GET captura o hash do corpo RSC e o guarda sob a sua rota.
-//  - POST garante o hash da sua rota (executa o `priming` GET quando ausente),
-//    injeta-o no header `Next-Action` e valida os dados de ação.
-//  - Auto-renew: se o POST volta sem dados de ação (hash expirado) ou falha por
-//    HTTP, o client re-abre a página (priming/último GET da rota) e repete uma
-//    vez. A tentativa inválida é lançada e LOGADA como ERROR (observabilidade).
+// Sessão real da GnJoy (confirmada por captura ao vivo da API):
+//  - O ID `Next-Action` NÃO vem no corpo RSC do GET — é uma constante de build
+//    embutida num chunk JS da página, via `createServerReference("<id>", ...)`.
+//  - Há UMA ÚNICA Server Action compartilhada para store/item/price (despacho
+//    interno por `params.type`); não há um hash por rota.
+//  - Descoberta: localiza os chunks (`static/chunks/*.js`) citados no corpo RSC
+//    do GET mais recente, busca cada um até achar a chamada, e cacheia o hash
+//    (estável até o próximo deploy do site).
+//  - Auto-renew: se o POST cair no fallback de página inteira (sem envelope de
+//    ação), descarta o hash cacheado, refaz o GET e tenta o POST novamente.
 
 import type { RequestPriority } from '@shared/types/domain'
 import { RequestQueueManager } from './RequestQueueManager'
-import type { GnJoyEndpoint } from './endpoints'
-import { extractNextAction, parseActionData } from './parser'
+import { GNJOY_BASE_URL, type GnJoyEndpoint } from './endpoints'
+import { extractActionHash, extractChunkPaths, parseActionEnvelope } from './parser'
 
 export interface FetchInit {
   method?: string
@@ -40,53 +41,41 @@ export class GnJoyError extends Error {
   }
 }
 
-/** Resposta HTTP OK porém sem dados de ação — hash `Next-Action` expirado/errado. */
+/** POST caiu no fallback de página inteira — hash `Next-Action` inválido/expirado. */
 export class StaleSessionError extends GnJoyError {
-  constructor(message = 'Sessão Next-Action expirada (resposta sem dados de ação).') {
+  constructor(message = 'Sessão Next-Action expirada (resposta sem envelope de ação).') {
     super(message, null)
     this.name = 'StaleSessionError'
   }
 }
 
 export class GnJoyClient {
-  /** hash dinâmico `Next-Action` por rota (pathname). */
-  private readonly nextActionByRoute = new Map<string, string>()
-  /** último GET bem-sucedido por rota — usado para renovar a sessão da rota. */
-  private readonly lastGetByRoute = new Map<string, GnJoyEndpoint>()
-  /** rota do GET mais recente (base do getter `currentNextAction`). */
-  private lastGetRoute: string | null = null
+  private actionHash: string | null = null
+  private lastGetEndpoint: GnJoyEndpoint | null = null
+  private renewing: Promise<void> | null = null
 
   constructor(
     private readonly queue: RequestQueueManager = RequestQueueManager.getInstance(),
     private readonly fetchImpl: FetchLike = fetch as unknown as FetchLike,
   ) {}
 
-  /** Executa um GET (RSC) e captura o hash Next-Action da rota. */
+  /** Executa um GET (RSC) e guarda o endpoint p/ eventual renovação da sessão. */
   get(endpoint: GnJoyEndpoint, priority: RequestPriority = 'HIGH'): Promise<string> {
     return this.enqueueGet(endpoint, priority)
   }
 
-  /** Executa um POST (Server Action) com sessão por-rota e auto-renew. */
+  /** Executa um POST (Server Action), garantindo o hash e com auto-renew em falha. */
   async post(endpoint: GnJoyEndpoint, priority: RequestPriority = 'HIGH'): Promise<string> {
-    // Garante que a "página" da ação foi aberta (hash da rota presente).
-    if (!this.nextActionByRoute.has(endpoint.route) && endpoint.priming) {
-      await this.enqueueGet(endpoint.priming, priority)
-    }
-
+    await this.ensureActionHash(priority)
     try {
       return await this.enqueuePost(endpoint, priority)
     } catch (error) {
       if (!(error instanceof GnJoyError)) throw error
-      // Renova a sessão DA MESMA ROTA e repete o POST uma única vez.
-      const renew = endpoint.priming ?? this.lastGetByRoute.get(endpoint.route)
-      if (!renew) {
-        throw new GnJoyError('Resposta inválida e sem GET prévio para renovar a sessão.')
-      }
-      await this.enqueueRenew(renew, priority)
+      await this.renewSession(priority)
       try {
         return await this.enqueuePost(endpoint, priority)
       } catch (retryError) {
-        if (retryError instanceof StaleSessionError) {
+        if (retryError instanceof GnJoyError) {
           throw new GnJoyError('Falha ao renovar a sessão Next-Action.')
         }
         throw retryError
@@ -94,36 +83,64 @@ export class GnJoyClient {
     }
   }
 
-  /** Hash Next-Action da rota do último GET (volátil). Exposto p/ diagnóstico/testes. */
-  get currentNextAction(): string | null {
-    return this.lastGetRoute ? (this.nextActionByRoute.get(this.lastGetRoute) ?? null) : null
+  /** Hash de Server Action descoberto (volátil). Exposto p/ diagnóstico/testes. */
+  get currentActionHash(): string | null {
+    return this.actionHash
   }
 
-  private enqueueGet(endpoint: GnJoyEndpoint, priority: RequestPriority): Promise<string> {
-    return this.queue.enqueue(() => this.rawGet(endpoint), {
-      method: 'GET',
-      path: endpoint.path,
-      humanAction: endpoint.humanAction,
-      priority,
-    })
+  private async ensureActionHash(priority: RequestPriority): Promise<void> {
+    if (this.actionHash) return
+    await this.renewSession(priority)
   }
 
-  private enqueueRenew(endpoint: GnJoyEndpoint, priority: RequestPriority): Promise<string> {
-    return this.queue.enqueue(() => this.rawGet(endpoint), {
+  /** Refaz o último GET e redescobre o hash (dedupe entre chamadas concorrentes). */
+  private renewSession(priority: RequestPriority): Promise<void> {
+    if (!this.renewing) {
+      this.renewing = this.doRenewSession(priority).finally(() => {
+        this.renewing = null
+      })
+    }
+    return this.renewing
+  }
+
+  private async doRenewSession(priority: RequestPriority): Promise<void> {
+    const endpoint = this.lastGetEndpoint
+    if (!endpoint) {
+      throw new GnJoyError('Sem GET prévio para estabelecer a sessão da GnJoy.')
+    }
+    this.actionHash = null
+    await this.enqueueGet(endpoint, priority, 'renew')
+  }
+
+  // IMPORTANTE: a descoberta do hash (que enfileira buscas de chunk) só pode
+  // acontecer DEPOIS que a promessa do GET resolver — a fila é de execução
+  // única (não-reentrante); enfileirar de DENTRO da task de outro job trava
+  // a fila (a task nunca termina, então o job do chunk nunca é processado).
+  private async enqueueGet(
+    endpoint: GnJoyEndpoint,
+    priority: RequestPriority,
+    kind: 'get' | 'renew' = 'get',
+  ): Promise<string> {
+    const text = await this.queue.enqueue(() => this.rawGet(endpoint), {
       method: 'GET',
-      path: `renew:${endpoint.route}`,
-      humanAction: 'Renovando sessão...',
+      path: kind === 'renew' ? `renew:${endpoint.path}` : endpoint.path,
+      humanAction: kind === 'renew' ? 'Renovando sessão...' : endpoint.humanAction,
       priority,
     })
+    this.lastGetEndpoint = endpoint
+    if (!this.actionHash) {
+      this.actionHash = await this.discoverActionHash(text, priority)
+    }
+    return text
   }
 
   private enqueuePost(endpoint: GnJoyEndpoint, priority: RequestPriority): Promise<string> {
     return this.queue.enqueue(
       async () => {
         const text = await this.rawPost(endpoint)
-        // Falha LÓGICA (sem dados de ação) lançada AQUI para que a fila a logue
-        // como ERROR — caso contrário o app mostraria "200" num POST que falhou.
-        if (parseActionData(text) === null) throw new StaleSessionError()
+        // Fallback de página inteira (sem envelope) lançado AQUI para que a
+        // fila o LOGUE como ERROR — senão o app mostraria "200" silencioso.
+        if (parseActionEnvelope(text) === null) throw new StaleSessionError()
         return text
       },
       { method: 'POST', path: endpoint.path, humanAction: endpoint.humanAction, priority },
@@ -133,12 +150,7 @@ export class GnJoyClient {
   private async rawGet(endpoint: GnJoyEndpoint): Promise<string> {
     const res = await this.fetchImpl(endpoint.url, { method: 'GET', headers: { RSC: '1' } })
     if (!res.ok) throw new GnJoyError(`GET falhou (${res.status})`, res.status)
-    const text = await res.text()
-    const hash = extractNextAction(text)
-    if (hash) this.nextActionByRoute.set(endpoint.route, hash)
-    this.lastGetByRoute.set(endpoint.route, endpoint)
-    this.lastGetRoute = endpoint.route
-    return text
+    return res.text()
   }
 
   private async rawPost(endpoint: GnJoyEndpoint): Promise<string> {
@@ -147,11 +159,41 @@ export class GnJoyClient {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/x-component',
-        'Next-Action': this.nextActionByRoute.get(endpoint.route) ?? '',
+        'Next-Action': this.actionHash ?? '',
       },
       body: JSON.stringify(endpoint.payload),
     })
     if (!res.ok) throw new GnJoyError(`POST falhou (${res.status})`, res.status)
     return res.text()
+  }
+
+  /** Varre os chunks JS referenciados pela página até achar a Server Action. */
+  private async discoverActionHash(
+    getBody: string,
+    priority: RequestPriority,
+  ): Promise<string | null> {
+    for (const chunkPath of extractChunkPaths(getBody)) {
+      const js = await this.fetchChunk(chunkPath, priority)
+      const hash = js ? extractActionHash(js) : null
+      if (hash) return hash
+    }
+    return null
+  }
+
+  private fetchChunk(chunkPath: string, priority: RequestPriority): Promise<string | null> {
+    return this.queue.enqueue(
+      async () => {
+        const res = await this.fetchImpl(`${GNJOY_BASE_URL}/_next/${chunkPath}`, {
+          method: 'GET',
+        })
+        return res.ok ? res.text() : null
+      },
+      {
+        method: 'GET',
+        path: `asset:${chunkPath}`,
+        humanAction: 'Descobrindo sessão da GnJoy...',
+        priority,
+      },
+    )
   }
 }

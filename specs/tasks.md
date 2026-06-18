@@ -124,19 +124,43 @@
 - [x] **Bug #2a** — Cadência do polling da Watchlist (`S = max(3s, T/N)`, pula
   pausados) em `src/renderer/utils/watchlistCycle.ts`.
 
-### Rodada 2 — sessão `Next-Action` por-rota + UX do log/tempo
-- [x] **Bug #1** — Sessão `Next-Action` **por rota** (`GnJoyClient`): o hash é um
-  *Server Action ID* do Next.js amarrado à página, então um POST só vale com o
-  hash de um GET da MESMA rota. `GnJoyEndpoint` ganhou `route` e `priming`; o
-  POST de preço (`market-price`) abre a própria página antes de postar. Resolve
-  `"Falha ao renovar a sessão Next-Action"` no `item:sync`.
-- [x] **Bug #2** — Média Ponderada = 0 era consequência do Bug #1 (histórico
-  nunca carregava). Sai com o fix acima; a UI mostra "—" (não "0z") quando não
-  há histórico (`formatZenyOrDash`).
+### Rodada 2 — sessão `Next-Action` por-rota (SUPERADA pela Rodada 3) + UX do log/tempo
+- [x] ~~Bug #1 — Sessão `Next-Action` por rota~~ — **diagnóstico errado**, não
+  validado contra a API real (sem acesso de rede no ambiente da época). O erro
+  persistiu em teste manual; ver Rodada 3 para a causa raiz real e o fix correto.
 - [x] **Problema #1** — "Sync" em tempo relativo ("há 3 min", "há 1 dia")
   com data exata no tooltip (`formatRelativeTime` + `useRelativeTime` /
   `<RelativeTime />`).
 - [x] **Problema #2** — Request Log com **ação amigável por linha** e **cor por
-  status** (verde/amarelo/vermelho/cinza). Falha lógica de POST (sem dados de
-  ação) agora é lançada como `StaleSessionError` e **logada como ERROR** — antes
-  passava como "200" silencioso.
+  status** (verde/amarelo/vermelho/cinza). Falha lógica de POST passou a ser
+  logada como ERROR — antes passava como "200" silencioso.
+
+### Rodada 3 — causa raiz real do Bug #1/#2 (confirmada por captura ao vivo da API)
+Diagnóstico da Rodada 2 estava errado em três pontos, só descobertos com acesso
+de rede real (sessão teleportada para a CLI local):
+1. O hash `Next-Action` **não vem no corpo RSC do GET** — vem embutido num
+   chunk JS da página, via `createServerReference(...)`.
+2. O hash **não tem 40 caracteres fixos** — o ID real capturado tem 42 (ex.:
+   `403371b38682ba2dd997d1b755ba1bb20fadfa07a9`).
+3. A Server Action é **compartilhada** entre store/item/price (despacho por
+   `params.type`) — não há um hash por rota; a "sessão por-rota" da Rodada 2
+   resolvia um problema que não existia.
+4. Cookies e header `Referer` foram testados e **não são necessários**.
+
+- [x] **Bug #1 (causa raiz)** — `GnJoyClient` reescrito: descobre o hash
+  varrendo os chunks JS referenciados pelo GET (`extractChunkPaths` +
+  `extractActionHash`, sem Regex de valor — busca por marcador fixo). Cache do
+  hash até falha; renovação descarta o cache e redescobre. `priceHistoryEndpoint`
+  volta a postar em `/trading` (não `/market-price`).
+- [x] **Bug #2** — Sai de graça com o Bug #1 (histórico volta a carregar).
+- [x] **Parser** — `parseActionEnvelope` substitui `parseActionData`: distingue
+  `{success:false}` (ação válida, recurso não encontrado — ex.: ssi expirado,
+  não deve disparar renovação) de "sem envelope nenhum" (sessão inválida, fallback
+  de página inteira — dispara renovação).
+- [x] **Verificação ao vivo** — confirmado contra a API real (não mockada):
+  busca de "elixir vermelho" (itemId 1100003) retornou 5 lojas ativas, hash
+  descoberto `403371b38682ba2dd997d1b755ba1bb20fadfa07a9`, 10 dias de histórico,
+  Média Ponderada = 46674.80 (não mais zero).
+- [x] Specs corrigidas: `0001-Arquitetura Base e Extracao de Dados.md`,
+  `0002-Endpoints de Mercado e Historico.md`, `Regras de Implementacao.md`
+  (o mecanismo documentado originalmente nunca foi validado contra a API real).

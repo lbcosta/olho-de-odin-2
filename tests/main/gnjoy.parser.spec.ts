@@ -1,7 +1,9 @@
 // tests/main/gnjoy.parser.spec.ts
 import { describe, expect, it } from 'vitest'
 import {
-  extractNextAction,
+  extractActionHash,
+  extractChunkPaths,
+  parseActionEnvelope,
   parseActiveListings,
   parseHistoricalSummaries,
   parsePriceHistory,
@@ -30,6 +32,21 @@ const PRICE_RSC = [
 
 const MARKET_PRICE_RSC =
   '10:["$","$L12",null,{"queryParams":{"serverType":"NIDHOGG"},"list":[{"svrId":303,"itemId":1100003,"mapId":892,"ssi":"7650218064285270433","itemName":"Elixir Vermelho","databaseImgPath":"https://assets/x.png","databaseType":"consumable","totalItemCnt":488542,"minItemPrice":1002,"maxItemPrice":9999999,"avgItemPrice":229042}],"totalCount":1}]'
+
+// Resposta de ação VÁLIDA porém com recurso não encontrado (ex.: ssi expirado)
+// — distinta de uma sessão inválida (que não tem envelope `success` nenhum).
+const NOT_FOUND_RSC = '0:{"a":"$@1","f":"","b":"x"}\n1:{"success":false}'
+
+// Fallback de página inteira (sessão/hash inválidos) — nenhuma linha de
+// nível superior tem a chave `success`.
+const FULL_PAGE_FALLBACK = [
+  '1:"$Sreact.fragment"',
+  '7:{"metadata":[["$","title","0",{"children":"Ragnarok"}]],"error":null,"digest":"$undefined"}',
+].join('\n')
+
+// Chunk JS minificado real (trecho) com a chamada que expõe o ID da ação.
+const ACTION_CHUNK_JS =
+  'var s=a(95155);let c=(0,r.createServerReference)("403371b38682ba2dd997d1b755ba1bb20fadfa07a9",r.callServer,void 0,r.findSourceMapURL,"getDetail");'
 
 describe('parseRscValues', () => {
   it('ignora linhas não-JSON (módulos RSC) sem lançar exceção', () => {
@@ -93,14 +110,51 @@ describe('parseHistoricalSummaries (GET market-price)', () => {
   })
 })
 
-describe('extractNextAction', () => {
-  it('captura um hash de Server Action (40 hex) sem Regex', () => {
-    const raw = '0:{"action":"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"}'
-    expect(extractNextAction(raw)).toBe('a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0')
+describe('parseActionEnvelope (Bug #1 — sessão Next-Action)', () => {
+  it('success:false COM envelope é distinto de sessão inválida (não é null)', () => {
+    const envelope = parseActionEnvelope(NOT_FOUND_RSC)
+    expect(envelope).not.toBeNull()
+    expect(envelope?.success).toBe(false)
+    expect(envelope?.data).toBeNull()
   })
 
-  it('retorna null quando não há hash', () => {
-    expect(extractNextAction('1:"$Sreact.fragment"')).toBeNull()
+  it('fallback de página inteira (sem envelope) retorna null — sinal de sessão inválida', () => {
+    expect(parseActionEnvelope(FULL_PAGE_FALLBACK)).toBeNull()
+  })
+
+  it('parseStoreLocation retorna null para success:false sem lançar exceção', () => {
+    expect(parseStoreLocation(NOT_FOUND_RSC)).toBeNull()
+  })
+})
+
+describe('extractChunkPaths (descoberta do Next-Action)', () => {
+  it('extrai os caminhos de chunk JS citados na árvore RSC, sem duplicar', () => {
+    const raw =
+      'f:I[65459,["4166","static/chunks/4166-8f91b73fcd947944.js","5525","static/chunks/5525-29362d0803ac03fd.js"],"default"]\n' +
+      '11:I[12,["5525","static/chunks/5525-29362d0803ac03fd.js"],"default"]'
+    expect(extractChunkPaths(raw)).toEqual([
+      'static/chunks/4166-8f91b73fcd947944.js',
+      'static/chunks/5525-29362d0803ac03fd.js',
+    ])
+  })
+
+  it('retorna lista vazia quando não há chunks', () => {
+    expect(extractChunkPaths('1:"$Sreact.fragment"')).toEqual([])
+  })
+})
+
+describe('extractActionHash (descoberta do Next-Action)', () => {
+  it('extrai o ID de Server Action de dentro de `createServerReference(...)`, sem Regex de valor', () => {
+    expect(extractActionHash(ACTION_CHUNK_JS)).toBe('403371b38682ba2dd997d1b755ba1bb20fadfa07a9')
+  })
+
+  it('não assume comprimento fixo de 40 — aceita IDs de qualquer tamanho hex', () => {
+    const js = 'createServerReference("ab12",x)'
+    expect(extractActionHash(js)).toBe('ab12')
+  })
+
+  it('retorna null quando o chunk não tem a chamada', () => {
+    expect(extractActionHash('var x = 1;')).toBeNull()
   })
 })
 

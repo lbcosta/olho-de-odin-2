@@ -8,6 +8,11 @@
 //
 // A localização dos dados é feita por FORMATO (shape), não por prefixo fixo,
 // para resistir a mudanças de ordem das chaves do Next.js.
+//
+// O ID da Server Action (`Next-Action`) é um caso aparte: NÃO vem no corpo RSC
+// do GET, vem embutido num chunk JS da página (`createServerReference("id",..)`).
+// A extração desse texto de framework (sem caracteres especiais de usuário) usa
+// busca por marcador fixo (`indexOf`), não Regex de captura — ver seção própria.
 
 import type {
   ActiveStoreListing,
@@ -79,14 +84,23 @@ function findEmbeddedList(raw: string): unknown[] {
   return []
 }
 
+/** Envelope de uma resposta POST (Server Action): `{success, data?}`. */
+export interface ActionEnvelope {
+  success: boolean
+  data: Record<string, unknown> | null
+}
+
 /**
- * Localiza o objeto de dados das respostas POST (Server Actions):
- * `{ "data": {...}, "success": true }`.
+ * Localiza o envelope de uma resposta POST (Server Action).
+ * Retorna `null` quando a resposta NÃO contém envelope nenhum — sinal de que a
+ * sessão (hash `Next-Action`) está inválida e o servidor caiu no fallback de
+ * página inteira. Distinto de `{success:false}`, que é uma resposta de ação
+ * VÁLIDA cujo recurso não foi encontrado (ex.: anúncio de loja expirado).
  */
-function findActionData(raw: string): Record<string, unknown> | null {
+function findActionEnvelope(raw: string): ActionEnvelope | null {
   for (const value of parseRscValues(raw)) {
-    if (isRecord(value) && 'success' in value && isRecord(value.data)) {
-      return value.data
+    if (isRecord(value) && 'success' in value) {
+      return { success: value.success === true, data: isRecord(value.data) ? value.data : null }
     }
   }
   return null
@@ -102,11 +116,11 @@ export function parseActiveListings(raw: string): ActiveStoreListing[] {
 }
 
 /**
- * Objeto de dados genérico de uma resposta POST (`{data,success}` → `data`).
- * Usado para detectar hash `Next-Action` expirado (retorno sem dados de ação).
+ * Envelope de uma resposta POST. `null` => sessão inválida (fallback de
+ * página inteira). Usado pelo `GnJoyClient` para decidir o auto-renew.
  */
-export function parseActionData(raw: string): Record<string, unknown> | null {
-  return findActionData(raw)
+export function parseActionEnvelope(raw: string): ActionEnvelope | null {
+  return findActionEnvelope(raw)
 }
 
 /** Resumos agregados da Busca no Histórico (GET market-price). */
@@ -114,41 +128,74 @@ export function parseHistoricalSummaries(raw: string): HistoricalSummary[] {
   return findEmbeddedList(raw) as HistoricalSummary[]
 }
 
-/** Localização da loja (POST store) — base do comando `/navi`. */
+/** Localização da loja (POST store) — base do comando `/navi`. `null` se o anúncio expirou. */
 export function parseStoreLocation(raw: string): StoreLocation | null {
-  const data = findActionData(raw)
+  const data = findActionEnvelope(raw)?.data
   return data ? (data as unknown as StoreLocation) : null
 }
 
 /** Histórico de preço detalhado (POST price). */
 export function parsePriceHistory(raw: string): PriceHistory | null {
-  const data = findActionData(raw)
+  const data = findActionEnvelope(raw)?.data
   if (!data || !Array.isArray((data as Record<string, unknown>).priceDetailDayList)) {
     return null
   }
   return data as unknown as PriceHistory
 }
 
+// ---------------------------------------------------------------------------
+// Descoberta do ID da Server Action (`Next-Action`)
+// ---------------------------------------------------------------------------
+//
+// O hash NÃO vem no corpo RSC do GET — ele é uma constante de build embutida
+// num chunk JS da página, referenciada via `createServerReference(...)`.
+// Por isso a descoberta tem duas etapas: (1) localizar os caminhos de chunk
+// citados na árvore RSC, (2) varrer o conteúdo de cada chunk até achar a chamada.
+
 /**
- * Extração best-effort do hash dinâmico `Next-Action` (Server Action, 40 hex).
- * A GnJoy entrega esse identificador no fluxo RSC/headers do GET inicial; como o
- * formato varia entre publicações, varre-se a string SEM Regex (run de hex
- * maximal de exatamente 40 caracteres). Retorna `null` se ausente.
+ * Localiza, sem Regex, os caminhos de chunk JS (`static/chunks/...js`)
+ * referenciados na árvore RSC — candidatos a conter a Server Action.
  */
-export function extractNextAction(raw: string): string | null {
-  const HASH_LEN = 40
-  let run = ''
-  for (let i = 0; i <= raw.length; i++) {
-    const ch = i < raw.length ? raw[i] : ''
-    if (isHexChar(ch)) {
-      run += ch
-    } else {
-      // Fim de um run: só aceita se for um hash maximal de exatamente 40 hex.
-      if (run.length === HASH_LEN) return run
-      run = ''
-    }
+export function extractChunkPaths(raw: string): string[] {
+  const MARKER = 'static/chunks/'
+  const SUFFIX = '.js'
+  const paths: string[] = []
+  let from = 0
+  while (true) {
+    const start = raw.indexOf(MARKER, from)
+    if (start === -1) break
+    const end = raw.indexOf(SUFFIX, start)
+    if (end === -1) break
+    paths.push(raw.slice(start, end + SUFFIX.length))
+    from = end + SUFFIX.length
   }
-  return null
+  return [...new Set(paths)]
+}
+
+/**
+ * Extrai, sem Regex, o ID de Server Action embutido num chunk JS via
+ * `createServerReference(...)`. Bundlers minificam a chamada como
+ * `(0,r.createServerReference)("<id>",...)` — por isso busca-se a PRIMEIRA
+ * aspas após o nome da função, em vez de exigir um `("` colado. O comprimento
+ * do ID NÃO é fixo (varia por build/ação) — valida-se só que é hex não-vazio.
+ */
+export function extractActionHash(js: string): string | null {
+  const MARKER = 'createServerReference'
+  const start = js.indexOf(MARKER)
+  if (start === -1) return null
+  const quoteStart = js.indexOf('"', start + MARKER.length)
+  if (quoteStart === -1) return null
+  const quoteEnd = js.indexOf('"', quoteStart + 1)
+  if (quoteEnd === -1) return null
+  const candidate = js.slice(quoteStart + 1, quoteEnd)
+  return candidate.length > 0 && isHexString(candidate) ? candidate : null
+}
+
+function isHexString(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    if (!isHexChar(s[i])) return false
+  }
+  return true
 }
 
 function isHexChar(ch: string): boolean {
