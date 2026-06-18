@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { SearchResultGroup } from '@shared/types/ipc'
+import { MARKET_STORE_TYPE } from '@shared/marketScope'
 import { getApi } from '../../hooks/useApi'
 import { useNavigation } from '../../contexts/NavigationContext'
 import { useToast } from '../../contexts/ToastContext'
@@ -41,7 +42,7 @@ export function SearchBar(): React.JSX.Element {
       const groups = await api.invoke('search:items', {
         searchWord: term,
         serverType: 'NIDHOGG',
-        storeType: 'SELL',
+        storeType: MARKET_STORE_TYPE,
       })
       setResults(groups)
       if (groups.length === 0) addToast('Item não encontrado.', 'info')

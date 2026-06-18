@@ -44,9 +44,10 @@ describe('SearchBar (T019/T025)', () => {
     await vi.advanceTimersByTimeAsync(300)
 
     expect(invoke).toHaveBeenCalledTimes(1)
+    // Bug #1: a busca DEVE usar storeType BUY (lojas vendendo), não SELL.
     expect(invoke).toHaveBeenCalledWith(
       'search:items',
-      expect.objectContaining({ searchWord: 'elixir' }),
+      expect.objectContaining({ searchWord: 'elixir', storeType: 'BUY' }),
     )
   })
 

@@ -103,3 +103,13 @@
 ### Testes Front-end & UI
 - [ ] T024 [P] Executar testes do limitador array `slice(-50)` de Memory Leak na Fila UI do Request Log em `tests/renderer/requestLog.spec.ts`.
 - [ ] T025 [P] Executar testes de Double-click (Spamming) e UI Skeletons em `tests/renderer/uiComponents.spec.ts`.
+
+### Dívida Técnica (correções adiadas)
+- [ ] T033 **Bug #2b** — Mover o motor de *polling* da Watchlist do *Renderer* para o
+  *Main Process*, unificando-o com o `StoreTracker`. Resolve dois problemas
+  identificados em testes manuais da Fase 3: (a) *timers* do Chromium são
+  estrangulados com a janela minimizada (conflita com "monitorar em segundo
+  plano" da spec), e (b) *polling* duplicado (WatchlistGrid + StoreTracker
+  consultam os mesmos itens de forma independente). A correção contida do
+  cadência/skip de pausados (Bug #2a) foi entregue na Fase 3; este item é a
+  rearquitetura definitiva.
