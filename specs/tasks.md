@@ -113,3 +113,30 @@
   consultam os mesmos itens de forma independente). A correção contida do
   cadência/skip de pausados (Bug #2a) foi entregue na Fase 3; este item é a
   rearquitetura definitiva.
+
+---
+
+## Correções pós-Fase 3 (testes manuais)
+
+### Rodada 1 — `storeType` + cadência do polling
+- [x] **Bug #1** — `storeType` correto (`BUY` = lojas vendendo) centralizado em
+  `src/shared/marketScope.ts` (`MARKET_STORE_TYPE`).
+- [x] **Bug #2a** — Cadência do polling da Watchlist (`S = max(3s, T/N)`, pula
+  pausados) em `src/renderer/utils/watchlistCycle.ts`.
+
+### Rodada 2 — sessão `Next-Action` por-rota + UX do log/tempo
+- [x] **Bug #1** — Sessão `Next-Action` **por rota** (`GnJoyClient`): o hash é um
+  *Server Action ID* do Next.js amarrado à página, então um POST só vale com o
+  hash de um GET da MESMA rota. `GnJoyEndpoint` ganhou `route` e `priming`; o
+  POST de preço (`market-price`) abre a própria página antes de postar. Resolve
+  `"Falha ao renovar a sessão Next-Action"` no `item:sync`.
+- [x] **Bug #2** — Média Ponderada = 0 era consequência do Bug #1 (histórico
+  nunca carregava). Sai com o fix acima; a UI mostra "—" (não "0z") quando não
+  há histórico (`formatZenyOrDash`).
+- [x] **Problema #1** — "Sync" em tempo relativo ("há 3 min", "há 1 dia")
+  com data exata no tooltip (`formatRelativeTime` + `useRelativeTime` /
+  `<RelativeTime />`).
+- [x] **Problema #2** — Request Log com **ação amigável por linha** e **cor por
+  status** (verde/amarelo/vermelho/cinza). Falha lógica de POST (sem dados de
+  ação) agora é lançada como `StaleSessionError` e **logada como ERROR** — antes
+  passava como "200" silencioso.

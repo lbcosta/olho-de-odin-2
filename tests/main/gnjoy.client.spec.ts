@@ -1,9 +1,14 @@
 // tests/main/gnjoy.client.spec.ts
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import type { RequestLogEntry } from '@shared/types/domain'
 import { RequestQueueManager } from '@main/services/gnjoy/RequestQueueManager'
 import { GnJoyClient, type FetchLike } from '@main/services/gnjoy/GnJoyClient'
-import { searchActiveEndpoint, storeLocationEndpoint } from '@main/services/gnjoy/endpoints'
-import { parseStoreLocation } from '@main/services/gnjoy/parser'
+import {
+  priceHistoryEndpoint,
+  searchActiveEndpoint,
+  storeLocationEndpoint,
+} from '@main/services/gnjoy/endpoints'
+import { parsePriceHistory, parseStoreLocation } from '@main/services/gnjoy/parser'
 
 interface ScriptedResponse {
   ok?: boolean
@@ -86,5 +91,60 @@ describe('GnJoyClient — sessão Next-Action', () => {
 
     expect(parseStoreLocation(text)?.mapName).toBe('prt_mk.gat')
     expect(calls).toHaveLength(4)
+  })
+})
+
+describe('GnJoyClient — sessão por-rota (Bug 1)', () => {
+  const PRICE_OK =
+    '1:{"data":{"itemPriceMin":1,"itemPriceMax":9,"priceDetailChartList":[],' +
+    '"priceDetailDayList":[{"nowDate":"2026-06-18","minItemPrice":5,"maxItemPrice":9,' +
+    '"avgItemPrice":7,"itemCnt":3,"totalCount":3}]},"success":true}'
+
+  it('POST de preço (market-price) abre a própria página e usa o hash da SUA rota', async () => {
+    const TRADING_HASH = HASH1
+    const MARKET_HASH = HASH2
+    const { impl, calls } = mockFetch([
+      { body: `0:{"k":"${TRADING_HASH}"}` }, // GET trading (lojas ativas)
+      { body: `0:{"k":"${MARKET_HASH}"}` }, // priming GET market-price (automático)
+      { body: PRICE_OK }, // POST price
+    ])
+    const client = new GnJoyClient(RequestQueueManager.getInstance(), impl)
+
+    await client.get(SEARCH) // rota trading
+    const price = priceHistoryEndpoint({
+      itemId: 501,
+      svrId: 303,
+      searchWord: 'elixir',
+      serverType: 'NIDHOGG',
+    })
+    const text = await client.post(price)
+
+    // Abriu a página market-price ANTES de postar, e usou o hash dela (não o da trading).
+    expect(calls).toHaveLength(3)
+    expect(calls[1].method).toBe('GET')
+    expect(calls[1].url).toContain('/market-price')
+    expect(calls[2].method).toBe('POST')
+    expect(calls[2].url).toContain('/market-price')
+    expect(calls[2].headers['Next-Action']).toBe(MARKET_HASH)
+    expect(parsePriceHistory(text)?.priceDetailDayList).toHaveLength(1)
+  })
+
+  it('POST sem dados de ação é LOGADO como ERROR (não passa como 200)', async () => {
+    const logs: RequestLogEntry[] = []
+    const queue = RequestQueueManager.getInstance()
+    queue.on('log', (e) => logs.push(e))
+    const { impl } = mockFetch([
+      { body: `0:{"k":"${HASH1}"}` }, // GET trading
+      { body: '<html>no action data</html>' }, // POST #1 sem dados (hash "expirado")
+      { body: `0:{"k":"${HASH2}"}` }, // renew
+      { body: VALID_STORE }, // POST #2 ok
+    ])
+    const client = new GnJoyClient(queue, impl)
+
+    await client.get(SEARCH)
+    await client.post(STORE)
+
+    const postErrors = logs.filter((l) => l.method === 'POST' && l.status === 'ERROR')
+    expect(postErrors.length).toBeGreaterThanOrEqual(1)
   })
 })

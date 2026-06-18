@@ -13,9 +13,10 @@ import { SkeletonCard } from '../ui/Skeleton'
 import {
   STATUS_DISPLAY,
   STRATEGY_DISPLAY,
-  formatTimestamp,
   formatZeny,
+  formatZenyOrDash,
 } from '../../utils/marketDisplay'
+import { RelativeTime } from '../ui/RelativeTime'
 import { MIN_ITEM_SPACING_MS, watchlistSpacingMs } from '../../utils/watchlistCycle'
 
 type CardState = 'idle' | 'queued' | 'updating'
@@ -238,7 +239,7 @@ function WatchlistCard({
             <Metric label="Menor preço" value={formatZeny(analysis.metrics.lowestActivePrice)} />
             <Metric
               label="Média ponderada"
-              value={formatZeny(analysis.metrics.weightedAveragePrice)}
+              value={formatZenyOrDash(analysis.metrics.weightedAveragePrice)}
             />
             <Metric label="Spread" value={formatZeny(analysis.metrics.currentSpread)} />
             <Metric
@@ -270,7 +271,7 @@ function WatchlistCard({
         </div>
         {details && (
           <p className="mt-2 text-[10px] text-gray-500">
-            Sync: {formatTimestamp(details.updatedAt)}
+            Sync: <RelativeTime iso={details.updatedAt} />
           </p>
         )}
       </button>

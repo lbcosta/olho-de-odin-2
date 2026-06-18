@@ -11,12 +11,23 @@ export type HistoryPeriod = '1' | '7' | '30' | 'ALL'
 export interface GnJoyEndpoint {
   method: 'GET' | 'POST'
   url: string
+  /**
+   * Rota (pathname SEM query) — chave da sessão `Next-Action`. O hash é um
+   * Server Action ID do Next.js amarrado à página: um POST só é válido com o
+   * hash capturado num GET DA MESMA rota.
+   */
+  route: string
   /** Caminho técnico (Developer View do Request Log). */
   path: string
   /** Tradução amigável da ação (visão colapsada). */
   humanAction: string
   /** Payload do Server Action (apenas POST). */
   payload?: unknown
+  /**
+   * GET que "abre" a página desta ação (apenas POST). O client o executa para
+   * capturar o hash da rota antes de postar (e para renovar a sessão).
+   */
+  priming?: GnJoyEndpoint
 }
 
 function tradingPath(): string {
@@ -42,6 +53,7 @@ export function searchActiveEndpoint(query: {
   return {
     method: 'GET',
     url: `${GNJOY_BASE_URL}${path}`,
+    route: tradingPath(),
     path,
     humanAction: `Buscando "${query.searchWord}" no mercado...`,
   }
@@ -62,6 +74,7 @@ export function searchHistoryEndpoint(query: {
   return {
     method: 'GET',
     url: `${GNJOY_BASE_URL}${path}`,
+    route: marketPricePath(),
     path,
     humanAction: `Consultando histórico de "${query.searchWord}"...`,
   }
@@ -76,6 +89,7 @@ export function storeLocationEndpoint(params: {
   return {
     method: 'POST',
     url: `${GNJOY_BASE_URL}${tradingPath()}`,
+    route: tradingPath(),
     path: `${tradingPath()} [store ${params.ssi}]`,
     humanAction: 'Buscando localização da loja...',
     payload: [{ type: 'store', params }],
@@ -91,24 +105,37 @@ export function itemDetailEndpoint(params: {
   return {
     method: 'POST',
     url: `${GNJOY_BASE_URL}${tradingPath()}`,
+    route: tradingPath(),
     path: `${tradingPath()} [item ${params.ssi}]`,
     humanAction: 'Buscando detalhes do item...',
     payload: [{ type: 'item', params: { ...params, multiLan: 'en-US' } }],
   }
 }
 
-/** POST — Histórico de preço detalhado (gráficos / Média Ponderada). */
+/**
+ * POST — Histórico de preço detalhado (gráficos / Média Ponderada).
+ * Vive na página `market-price`: requer o hash dessa rota. Por isso declara o
+ * `priming` (GET do histórico do mesmo item) — sem ele, postar com o hash da
+ * página `trading` falha ("Falha ao renovar a sessão Next-Action").
+ */
 export function priceHistoryEndpoint(params: {
   itemId: number
   svrId: number
+  searchWord: string
+  serverType: ServerType
   page?: number
   limit?: number
 }): GnJoyEndpoint {
   return {
     method: 'POST',
     url: `${GNJOY_BASE_URL}${marketPricePath()}`,
+    route: marketPricePath(),
     path: `${marketPricePath()} [price ${params.itemId}]`,
     humanAction: 'Atualizando histórico de preços...',
+    priming: searchHistoryEndpoint({
+      searchWord: params.searchWord,
+      serverType: params.serverType,
+    }),
     payload: [
       {
         type: 'price',

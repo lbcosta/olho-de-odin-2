@@ -14,9 +14,10 @@ import { SkeletonCard } from '../ui/Skeleton'
 import {
   STATUS_DISPLAY,
   STRATEGY_DISPLAY,
-  formatTimestamp,
   formatZeny,
+  formatZenyOrDash,
 } from '../../utils/marketDisplay'
+import { RelativeTime } from '../ui/RelativeTime'
 
 type SortOrder = 'asc' | 'desc'
 
@@ -112,7 +113,7 @@ export function ItemDashboard({ itemId }: { itemId: number }): React.JSX.Element
                 {item.type || 'item'} · #{item.itemId}
               </p>
               <p className="mt-1 text-xs text-gray-500">
-                Última sincronização: {formatTimestamp(details.updatedAt)}
+                Última sincronização: <RelativeTime iso={details.updatedAt} />
               </p>
             </div>
           </div>
@@ -141,7 +142,7 @@ export function ItemDashboard({ itemId }: { itemId: number }): React.JSX.Element
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <Metric
                   label="Média Ponderada Real"
-                  value={formatZeny(analysis.metrics.weightedAveragePrice)}
+                  value={formatZenyOrDash(analysis.metrics.weightedAveragePrice)}
                 />
                 <Metric
                   label="Menor Preço Ativo"

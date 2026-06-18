@@ -139,7 +139,10 @@ export class MarketService {
     let history: PriceHistory | null = null
     const svrId = listings[0]?.svrId
     if (svrId !== undefined) {
-      const priceRaw = await this.client.post(priceHistoryEndpoint({ itemId, svrId }), 'HIGH')
+      const priceRaw = await this.client.post(
+        priceHistoryEndpoint({ itemId, svrId, searchWord: item.name, serverType }),
+        'HIGH',
+      )
       history = parsePriceHistory(priceRaw)
     }
 
