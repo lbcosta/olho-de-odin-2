@@ -94,7 +94,7 @@ function registerMarketHandlers(market: MarketService): void {
   handle(IpcChannel.WatchlistSetInMyStore, ({ itemId, enabled }) => {
     market.setInMyStore(itemId, enabled)
   })
-  handle(IpcChannel.WatchlistBulkImport, ({ filePath }) => market.bulkImport(filePath))
+  handle(IpcChannel.WatchlistBulkImport, ({ content }) => market.bulkImportText(content))
 
   handle(IpcChannel.MetricsCompute, ({ itemId }) => market.computeMetrics(itemId))
 }
@@ -120,7 +120,7 @@ export function registerIpcHandlers(): RegisteredServices {
   const cache = new CacheService(db)
   const queue = RequestQueueManager.getInstance()
   const client = new GnJoyClient(queue)
-  const market = new MarketService(queue, client, cache, profiles)
+  const market = new MarketService(client, cache, profiles)
   const storeTracker = new StoreTracker(profiles, sendOsNotification)
   const watchlistMonitor = new WatchlistMonitor(
     profiles,

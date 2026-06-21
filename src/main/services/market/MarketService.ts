@@ -19,7 +19,6 @@ import type {
   SearchQuery,
   SearchResultGroup,
 } from '@shared/types/ipc'
-import type { RequestQueueManager } from '../gnjoy/RequestQueueManager'
 import { GnJoyClient, GnJoyError } from '../gnjoy/GnJoyClient'
 import {
   priceHistoryEndpoint,
@@ -49,7 +48,6 @@ const storeKey = (ssi: string): string => `store:${ssi}`
 
 export class MarketService {
   constructor(
-    private readonly queue: RequestQueueManager,
     private readonly client: GnJoyClient,
     private readonly cache: CacheService,
     private readonly profiles: ProfileService,
@@ -199,15 +197,15 @@ export class MarketService {
     this.profiles.setInMyStore(this.activeProfileId(), itemId, enabled)
   }
 
-  bulkImport(filePath: string): { queued: number } {
-    const importer = new BulkImportService(this.queue, async (name) => {
+  bulkImportText(content: string): { queued: number } {
+    const importer = new BulkImportService(async (name) => {
       const groups = await this.searchItems(
         { searchWord: name, serverType: 'NIDHOGG', storeType: MARKET_STORE_TYPE },
         'LOW',
       )
       if (groups[0]) this.addToWatchlist(groups[0].itemId)
     })
-    return { queued: importer.importFromFile(filePath).queued }
+    return { queued: importer.importFromText(content).queued }
   }
 
   // ----- Internos ---------------------------------------------------------

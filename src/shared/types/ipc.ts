@@ -185,7 +185,7 @@ export interface IpcContract {
     response: void
   }
   [IpcChannel.WatchlistBulkImport]: {
-    request: { filePath: string }
+    request: { content: string }
     response: { queued: number }
   }
   [IpcChannel.WatchlistSetMonitoringMaster]: { request: { enabled: boolean }; response: void }

@@ -4,7 +4,7 @@
 // Process (Bug #2b — `WatchlistMonitor`); cada card reflete seu estado via
 // evento push (Na Fila / Atualizando), respeitando o Rate Limit (3s/req).
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { WatchlistEntry } from '@shared/types/domain'
 import { IpcEvent, type ItemDetails, type WatchlistCardState } from '@shared/types/ipc'
 import { getApi } from '../../hooks/useApi'
@@ -31,6 +31,7 @@ export function WatchlistGrid(): React.JSX.Element {
   const [masterOn, setMasterOn] = useState(false)
   const { navigate } = useNavigation()
   const { addToast } = useToast()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Reflete o Master Switch já ativo no Main (sobrevive a remontagens do componente).
   useEffect(() => {
@@ -92,6 +93,24 @@ export function WatchlistGrid(): React.JSX.Element {
     setMasterOn(enabled)
   }
 
+  // Importação em Massa (F2): lê o .txt via FileReader e envia o conteúdo ao
+  // Main, que sanitiza e enfileira cada busca (LOW) na fila global.
+  async function onBulkFile(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const input = e.target
+    const file = input.files?.[0]
+    input.value = '' // permite reimportar o mesmo arquivo depois
+    if (!file) return
+    const api = getApi()
+    if (!api) return
+    try {
+      const content = await file.text()
+      const { queued } = await api.invoke('watchlist:bulk-import', { content })
+      addToast(`Importando ${queued} item(ns) em segundo plano…`, 'info')
+    } catch {
+      addToast('Falha ao importar a lista.', 'error')
+    }
+  }
+
   async function remove(itemId: number): Promise<void> {
     const api = getApi()
     if (!api) return
@@ -131,19 +150,36 @@ export function WatchlistGrid(): React.JSX.Element {
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Watchlist</h2>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <span className="text-gray-400">Monitoramento</span>
+        <div className="flex items-center gap-3">
           <button
-            role="switch"
-            aria-checked={masterOn}
-            onClick={() => void toggleMaster()}
-            className={`relative h-6 w-11 rounded-full transition ${masterOn ? 'bg-odin-500' : 'bg-surface-overlay'}`}
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-lg border border-surface-border px-3 py-1.5 text-sm hover:border-odin-500"
           >
-            <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${masterOn ? 'left-[22px]' : 'left-0.5'}`}
-            />
+            📄 Importar .txt
           </button>
-        </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".txt,text/plain"
+            aria-label="Importar lista .txt"
+            className="hidden"
+            onChange={(e) => void onBulkFile(e)}
+          />
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <span className="text-gray-400">Monitoramento</span>
+            <button
+              role="switch"
+              aria-checked={masterOn}
+              onClick={() => void toggleMaster()}
+              className={`relative h-6 w-11 rounded-full transition ${masterOn ? 'bg-odin-500' : 'bg-surface-overlay'}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${masterOn ? 'left-[22px]' : 'left-0.5'}`}
+              />
+            </button>
+          </label>
+        </div>
       </div>
 
       {loading ? (

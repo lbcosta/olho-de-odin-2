@@ -1,10 +1,7 @@
 // src/main/services/search/BulkImport.ts
 // Importação em Massa via .txt (1 nome de item por linha).
-// Higieniza as linhas e enfileira uma busca por item na fila global com
-// Prioridade BAIXA (não atrapalha comandos do usuário nem a Watchlist).
-
-import { readFileSync } from 'node:fs'
-import type { RequestQueueManager } from '../gnjoy/RequestQueueManager'
+// Higieniza as linhas e dispara, para cada nome, o processador injetado — que
+// internamente enfileira sua própria busca (Prioridade BAIXA) na fila global.
 
 /** Tamanho máximo aceito para um nome de item (higienização). */
 export const MAX_ITEM_NAME_LENGTH = 100
@@ -37,29 +34,23 @@ export interface BulkImportResult {
 }
 
 export class BulkImportService {
-  constructor(
-    private readonly queue: RequestQueueManager,
-    private readonly processItem: BulkItemProcessor,
-  ) {}
+  constructor(private readonly processItem: BulkItemProcessor) {}
 
-  /** Enfileira (Prioridade BAIXA) uma tarefa de busca por nome sanitizado. */
+  /**
+   * Dispara o processamento de cada nome sanitizado.
+   *
+   * IMPORTANTE (Bug F2): NÃO envolvemos `processItem` em `queue.enqueue` aqui.
+   * O próprio processador já enfileira sua busca (via GnJoyClient) na fila
+   * global single-slot. Envolvê-lo de novo causaria reentrância — o job externo
+   * ficaria preso aguardando o job interno que só roda quando o externo liberar
+   * a fila, travando-a até o timeout de cada item.
+   */
   importFromText(content: string): BulkImportResult {
     const names = parseBulkText(content)
     for (const name of names) {
-      void this.queue
-        .enqueue(() => this.processItem(name), {
-          method: 'GET',
-          path: '/pt/intro/shop-search/trading',
-          humanAction: `Importando "${name}"...`,
-          priority: 'LOW',
-        })
-        // A fila já reporta o erro ao logger; aqui evitamos unhandled rejection.
-        .catch(() => undefined)
+      // A fila interna já reporta erros ao logger; evitamos unhandled rejection.
+      void this.processItem(name).catch(() => undefined)
     }
     return { queued: names.length, names }
-  }
-
-  importFromFile(filePath: string): BulkImportResult {
-    return this.importFromText(readFileSync(filePath, 'utf-8'))
   }
 }
