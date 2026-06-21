@@ -12,9 +12,13 @@
 // estiver sendo ativamente monitorado (Master Switch ligado e o item em si
 // não pausado) — pausar é, deliberadamente, "parar de consultar a rede para
 // este item", incluindo a detecção de "Minha Loja".
+//
+// Prioridade na fila (architecture §3 / F3): itens comuns do ciclo entram como
+// NORMAL; itens `isInMyStore` entram como HIGH (máxima), para a notificação de
+// Venda/DC sair o quanto antes.
 
 import type { ItemDetails, WatchlistCardState } from '@shared/types/ipc'
-import type { ServerType } from '@shared/types/domain'
+import type { RequestPriority, ServerType } from '@shared/types/domain'
 import { MIN_ITEM_SPACING_MS, watchlistSpacingMs } from '@shared/watchlistCycle'
 import type { ProfileService } from '../profile/ProfileService'
 import type { StoreTracker } from '../store/StoreTracker'
@@ -24,7 +28,11 @@ export type CardBroadcaster = (
   state: WatchlistCardState,
   details: ItemDetails | null,
 ) => void
-export type ItemSyncer = (itemId: number, serverType: ServerType) => Promise<ItemDetails>
+export type ItemSyncer = (
+  itemId: number,
+  serverType: ServerType,
+  priority: RequestPriority,
+) => Promise<ItemDetails>
 
 const WATCHLIST_SERVER: ServerType = 'NIDHOGG'
 
@@ -72,8 +80,10 @@ export class WatchlistMonitor {
         for (const entry of entries) {
           if (!this.enabled) break
           this.broadcastCard(entry.itemId, 'updating', null)
+          // Minha Loja (isInMyStore) tem prioridade máxima; itens comuns, NORMAL.
+          const priority: RequestPriority = entry.isInMyStore ? 'HIGH' : 'NORMAL'
           try {
-            const details = await this.syncItem(entry.itemId, WATCHLIST_SERVER)
+            const details = await this.syncItem(entry.itemId, WATCHLIST_SERVER, priority)
             if (entry.isInMyStore) this.storeTracker.track(entry.itemId, details.listings)
             this.broadcastCard(entry.itemId, 'idle', details)
           } catch {

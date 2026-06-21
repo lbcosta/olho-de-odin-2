@@ -76,6 +76,8 @@ export const IpcEvent = {
   QueueStatus: 'event:queue-status',
   /** Progresso por-card do ciclo unificado da Watchlist (Bug #2b). */
   WatchlistCard: 'event:watchlist-card',
+  /** Alerta da "Minha Loja" (Venda/DC) para toast in-app quando o app está em foco. */
+  StoreAlert: 'event:store-alert',
 } as const
 
 export type IpcEvent = (typeof IpcEvent)[keyof typeof IpcEvent]
@@ -134,6 +136,12 @@ export interface WatchlistCardUpdate {
   state: WatchlistCardState
   /** Presente apenas quando `state` é `'idle'` após uma sincronização bem-sucedida. */
   details: ItemDetails | null
+}
+
+/** Alerta da "Minha Loja" exibido como toast in-app (Venda/DC) quando em foco. */
+export interface StoreAlert {
+  title: string
+  body: string
 }
 
 export interface CreateProfileRequest {
@@ -216,6 +224,7 @@ export interface IpcEventPayload {
   [IpcEvent.LogEntry]: RequestLogEntry
   [IpcEvent.QueueStatus]: QueueStatus
   [IpcEvent.WatchlistCard]: WatchlistCardUpdate
+  [IpcEvent.StoreAlert]: StoreAlert
 }
 
 // ---------------------------------------------------------------------------

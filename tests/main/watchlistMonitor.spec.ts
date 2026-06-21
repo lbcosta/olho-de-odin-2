@@ -4,7 +4,7 @@ import { WatchlistMonitor } from '@main/services/watchlist/WatchlistMonitor'
 import type { ProfileService } from '@main/services/profile/ProfileService'
 import type { StoreTracker } from '@main/services/store/StoreTracker'
 import type { ItemDetails } from '@shared/types/ipc'
-import type { WatchlistEntry } from '@shared/types/domain'
+import type { RequestPriority, ServerType, WatchlistEntry } from '@shared/types/domain'
 
 function entry(itemId: number, opts: Partial<WatchlistEntry> = {}): WatchlistEntry {
   return { profileId: 1, itemId, isMonitoring: true, isInMyStore: false, createdAt: '', ...opts }
@@ -134,5 +134,31 @@ describe('WatchlistMonitor (Bug #2b — ciclo unificado no Main Process)', () =>
     await vi.advanceTimersByTimeAsync(120_000) // bem além do ciclo de 60s
 
     expect(syncItem).toHaveBeenCalledTimes(1)
+  })
+
+  it('prioriza itens isInMyStore como HIGH e itens comuns como NORMAL (F3)', async () => {
+    const regular = entry(1)
+    const mine = entry(2, { isInMyStore: true })
+    const calls: Array<{ itemId: number; serverType: ServerType; priority: RequestPriority }> = []
+    const syncItem = vi.fn(
+      async (itemId: number, serverType: ServerType, priority: RequestPriority) => {
+        calls.push({ itemId, serverType, priority })
+        return details(itemId)
+      },
+    )
+    const monitor = new WatchlistMonitor(
+      profilesStub([regular, mine]),
+      syncItem,
+      trackerStub(),
+      vi.fn(),
+    )
+
+    monitor.setEnabled(true)
+    await vi.advanceTimersByTimeAsync(35_000) // 2 itens => espaçamento 30s (item1 ~0s, item2 ~30s)
+    monitor.setEnabled(false)
+    await vi.advanceTimersByTimeAsync(600)
+
+    expect(calls.find((c) => c.itemId === 1)?.priority).toBe('NORMAL')
+    expect(calls.find((c) => c.itemId === 2)?.priority).toBe('HIGH')
   })
 })
