@@ -3,13 +3,17 @@
 // Fase 1: sistema. Fase 2: Perfil. Fase 3: Search/Item/Watchlist/Metrics (GnJoy).
 
 import { app, BrowserWindow, dialog } from 'electron'
-import { IpcChannel, type AppInfo } from '@shared/types/ipc'
+import { IpcChannel, IpcEvent, type AppInfo } from '@shared/types/ipc'
 import { getDatabase } from '../database'
 import { ProfileService } from '../services/profile/ProfileService'
 import { CacheService } from '../services/cache/CacheService'
 import { GnJoyClient } from '../services/gnjoy/GnJoyClient'
 import { RequestQueueManager } from '../services/gnjoy/RequestQueueManager'
 import { MarketService } from '../services/market/MarketService'
+import { StoreTracker } from '../services/store/StoreTracker'
+import { WatchlistMonitor } from '../services/watchlist/WatchlistMonitor'
+import { sendOsNotification } from '../notifications'
+import { broadcast } from './broadcast'
 import { handle } from './handle'
 
 function buildAppInfo(): AppInfo {
@@ -95,9 +99,18 @@ function registerMarketHandlers(market: MarketService): void {
   handle(IpcChannel.MetricsCompute, ({ itemId }) => market.computeMetrics(itemId))
 }
 
+/** Liga o Master Switch do ciclo unificado da Watchlist (Bug #2b) ao IPC. */
+function registerWatchlistMonitorHandlers(monitor: WatchlistMonitor): void {
+  handle(IpcChannel.WatchlistSetMonitoringMaster, ({ enabled }) => {
+    monitor.setEnabled(enabled)
+  })
+  handle(IpcChannel.WatchlistGetMonitoringMaster, () => ({ enabled: monitor.isEnabled }))
+}
+
 export interface RegisteredServices {
   market: MarketService
   profiles: ProfileService
+  watchlistMonitor: WatchlistMonitor
 }
 
 /** Registra todos os handlers IPC e devolve serviços para wiring adicional. */
@@ -108,11 +121,19 @@ export function registerIpcHandlers(): RegisteredServices {
   const queue = RequestQueueManager.getInstance()
   const client = new GnJoyClient(queue)
   const market = new MarketService(queue, client, cache, profiles)
+  const storeTracker = new StoreTracker(profiles, sendOsNotification)
+  const watchlistMonitor = new WatchlistMonitor(
+    profiles,
+    (itemId, serverType) => market.syncItem(itemId, serverType),
+    storeTracker,
+    (itemId, state, details) => broadcast(IpcEvent.WatchlistCard, { itemId, state, details }),
+  )
 
   registerSystemHandlers()
   registerDialogHandlers()
   registerProfileHandlers(profiles)
   registerMarketHandlers(market)
+  registerWatchlistMonitorHandlers(watchlistMonitor)
 
-  return { market, profiles }
+  return { market, profiles, watchlistMonitor }
 }

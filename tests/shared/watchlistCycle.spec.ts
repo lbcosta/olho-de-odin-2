@@ -1,10 +1,10 @@
-// tests/renderer/watchlistCycle.spec.ts
+// tests/shared/watchlistCycle.spec.ts
 import { describe, expect, it } from 'vitest'
 import {
   MIN_ITEM_SPACING_MS,
   WATCHLIST_CYCLE_TARGET_MS,
   watchlistSpacingMs,
-} from '@renderer/utils/watchlistCycle'
+} from '@shared/watchlistCycle'
 
 describe('watchlistSpacingMs (Bug #2a — cadência)', () => {
   it('1 item => espaça pelo ciclo-alvo inteiro (não re-busca em rajada)', () => {

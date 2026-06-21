@@ -45,6 +45,9 @@ export const IpcChannel = {
   WatchlistSetMonitoring: 'watchlist:set-monitoring',
   WatchlistSetInMyStore: 'watchlist:set-in-my-store',
   WatchlistBulkImport: 'watchlist:bulk-import',
+  // Master Switch do ciclo de polling, agora hospedado no Main (Bug #2b).
+  WatchlistSetMonitoringMaster: 'watchlist:set-monitoring-master',
+  WatchlistGetMonitoringMaster: 'watchlist:get-monitoring-master',
 
   // Profile (Fase 2)
   ProfileList: 'profile:list',
@@ -71,6 +74,8 @@ export const IpcEvent = {
   LogEntry: 'event:log-entry',
   /** Atualização agregada do estado da fila. */
   QueueStatus: 'event:queue-status',
+  /** Progresso por-card do ciclo unificado da Watchlist (Bug #2b). */
+  WatchlistCard: 'event:watchlist-card',
 } as const
 
 export type IpcEvent = (typeof IpcEvent)[keyof typeof IpcEvent]
@@ -118,6 +123,17 @@ export interface ExpandStoreRequest {
   svrId: number
   mapId: number
   ssi: string
+}
+
+/** Estado de um card no ciclo de polling (visão "Na Fila" / "Atualizando"). */
+export type WatchlistCardState = 'queued' | 'updating' | 'idle'
+
+/** Payload do evento push emitido a cada transição de estado de um card. */
+export interface WatchlistCardUpdate {
+  itemId: number
+  state: WatchlistCardState
+  /** Presente apenas quando `state` é `'idle'` após uma sincronização bem-sucedida. */
+  details: ItemDetails | null
 }
 
 export interface CreateProfileRequest {
@@ -172,6 +188,8 @@ export interface IpcContract {
     request: { filePath: string }
     response: { queued: number }
   }
+  [IpcChannel.WatchlistSetMonitoringMaster]: { request: { enabled: boolean }; response: void }
+  [IpcChannel.WatchlistGetMonitoringMaster]: { request: void; response: { enabled: boolean } }
 
   [IpcChannel.ProfileList]: { request: void; response: Profile[] }
   [IpcChannel.ProfileGetActive]: { request: void; response: Profile | null }
@@ -197,6 +215,7 @@ export type IpcResponse<C extends IpcChannel> = IpcContract[C]['response']
 export interface IpcEventPayload {
   [IpcEvent.LogEntry]: RequestLogEntry
   [IpcEvent.QueueStatus]: QueueStatus
+  [IpcEvent.WatchlistCard]: WatchlistCardUpdate
 }
 
 // ---------------------------------------------------------------------------

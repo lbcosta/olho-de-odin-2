@@ -1,10 +1,13 @@
-// src/renderer/utils/watchlistCycle.ts
+// src/shared/watchlistCycle.ts
 // Cadência do ciclo de monitoramento da Watchlist (corrige o polling "metralhadora").
 //
 // A spec (Watchlist 0003) define T_min = N × 3s e espaçamento S = T / N. Aqui
 // usamos um período-alvo de ciclo (T) razoável e derivamos o espaçamento entre
 // itens, nunca abaixo do Rate Limit. Para N = 1, re-sincroniza a cada ~60s
 // (em vez de a cada ~3s, indefinidamente).
+//
+// Vive em `shared` (não em `renderer`) porque o motor de polling roda no Main
+// Process (Bug #2b) — ver `src/main/services/watchlist/WatchlistMonitor.ts`.
 
 /** Período-alvo de um ciclo completo de monitoramento (T). */
 export const WATCHLIST_CYCLE_TARGET_MS = 60_000
