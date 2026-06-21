@@ -37,6 +37,7 @@ function setupApi(opts: { masterEnabled?: boolean } = {}): ReturnType<typeof vi.
       return { enabled: opts.masterEnabled ?? false }
     }
     if (channel === 'watchlist:set-monitoring-master') return undefined
+    if (channel === 'watchlist:bulk-import') return { queued: 2 }
     return undefined
   })
   window.api = {
@@ -130,5 +131,24 @@ describe('WatchlistGrid — toggle "Minha Loja" do card (F1)', () => {
     expect(invoke).toHaveBeenCalledWith('watchlist:set-in-my-store', { itemId: 1, enabled: true })
     // O card passa a refletir o estado ligado (botão vira "Remover de ...").
     expect(screen.getByTitle('Remover de "Minha Loja"')).toBeTruthy()
+  })
+})
+
+describe('WatchlistGrid — importação em massa .txt (F2)', () => {
+  it('lê o arquivo e envia o conteúdo via watchlist:bulk-import', async () => {
+    const invoke = setupApi()
+    renderGrid()
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    const input = screen.getByLabelText('Importar lista .txt')
+    const file = { text: async () => 'Elixir\nJellopy' } as unknown as File
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } })
+      await Promise.resolve()
+    })
+
+    expect(invoke).toHaveBeenCalledWith('watchlist:bulk-import', { content: 'Elixir\nJellopy' })
   })
 })

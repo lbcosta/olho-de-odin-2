@@ -24,7 +24,7 @@ describe('parseBulkText (higienização)', () => {
   })
 })
 
-describe('BulkImportService', () => {
+describe('BulkImportService (sem reentrância na fila — F2)', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     RequestQueueManager.__resetForTests()
@@ -34,32 +34,39 @@ describe('BulkImportService', () => {
     RequestQueueManager.__resetForTests()
   })
 
-  it('enfileira uma tarefa de BAIXA prioridade por item e processa cada nome', async () => {
+  it('despacha cada item por UMA busca LOW sem travar a fila (regressão do deadlock)', async () => {
+    // O processador SIMULA o fluxo real (searchItems): ele mesmo enfileira a
+    // busca na fila global. Com o bug antigo — BulkImportService re-enfileirava
+    // o processador — o job externo prenderia o slot único aguardando este job
+    // interno, travando a fila (searched ficaria vazio até o timeout).
     const queue = RequestQueueManager.getInstance(3000)
-    const processed: string[] = []
-    const processor = vi.fn(async (name: string) => {
-      processed.push(name)
-    })
-    const service = new BulkImportService(queue, processor)
+    const searched: string[] = []
+    const processor = (name: string) =>
+      queue.enqueue(
+        async () => {
+          searched.push(name)
+        },
+        {
+          method: 'GET' as const,
+          path: '/trading',
+          humanAction: `Buscando "${name}"`,
+          priority: 'LOW' as const,
+        },
+      )
+    const service = new BulkImportService(processor)
 
     const result = service.importFromText('Elixir\nJellopy\nFabric')
     expect(result.queued).toBe(3)
-    // A 1ª tarefa já entra em processamento (slot livre); restam 2 pendentes.
-    expect(queue.pending).toBe(2)
 
-    await vi.advanceTimersByTimeAsync(6000) // 3 itens => 0s, 3s, 6s
+    await vi.advanceTimersByTimeAsync(6000) // 3 buscas LOW => 0s, 3s, 6s
 
-    expect(processed).toEqual(['Elixir', 'Jellopy', 'Fabric'])
-    expect(processor).toHaveBeenCalledTimes(3)
+    expect(searched).toEqual(['Elixir', 'Jellopy', 'Fabric'])
   })
 
-  it('não enfileira nada para conteúdo vazio', () => {
-    const queue = RequestQueueManager.getInstance(3000)
-    const service = new BulkImportService(
-      queue,
-      vi.fn(async () => {}),
-    )
+  it('não despacha nada para conteúdo vazio', () => {
+    const processor = vi.fn(async () => {})
+    const service = new BulkImportService(processor)
     expect(service.importFromText('  \n\n').queued).toBe(0)
-    expect(queue.pending).toBe(0)
+    expect(processor).not.toHaveBeenCalled()
   })
 })
