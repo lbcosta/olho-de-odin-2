@@ -113,3 +113,22 @@ describe('WatchlistGrid — Master Switch delega o ciclo ao Main (Bug #2b)', () 
     expect(screen.getByText('900z')).toBeTruthy()
   })
 })
+
+describe('WatchlistGrid — toggle "Minha Loja" do card (F1)', () => {
+  it('liga o rastreio "Minha Loja" via IPC ao clicar no botão do card', async () => {
+    const invoke = setupApi()
+    renderGrid()
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Marcar como "Minha Loja"'))
+      await Promise.resolve()
+    })
+
+    expect(invoke).toHaveBeenCalledWith('watchlist:set-in-my-store', { itemId: 1, enabled: true })
+    // O card passa a refletir o estado ligado (botão vira "Remover de ...").
+    expect(screen.getByTitle('Remover de "Minha Loja"')).toBeTruthy()
+  })
+})

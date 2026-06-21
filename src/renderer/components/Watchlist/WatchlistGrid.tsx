@@ -114,6 +114,19 @@ export function WatchlistGrid(): React.JSX.Element {
     )
   }
 
+  // Liga/desliga o rastreio "Minha Loja" do item (detecção de Venda/DC no Main).
+  async function toggleInMyStore(entry: WatchlistEntry): Promise<void> {
+    const api = getApi()
+    if (!api) return
+    const enabled = !entry.isInMyStore
+    await api.invoke('watchlist:set-in-my-store', { itemId: entry.itemId, enabled })
+    setCards((prev) =>
+      prev.map((c) =>
+        c.entry.itemId === entry.itemId ? { ...c, entry: { ...c.entry, isInMyStore: enabled } } : c,
+      ),
+    )
+  }
+
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
@@ -158,6 +171,7 @@ export function WatchlistGrid(): React.JSX.Element {
               }
               onRemove={() => void remove(card.entry.itemId)}
               onTogglePause={() => void toggleMonitoring(card.entry)}
+              onToggleMyStore={() => void toggleInMyStore(card.entry)}
             />
           ))}
         </div>
@@ -171,11 +185,13 @@ function WatchlistCard({
   onOpen,
   onRemove,
   onTogglePause,
+  onToggleMyStore,
 }: {
   card: Card
   onOpen: () => void
   onRemove: () => void
   onTogglePause: () => void
+  onToggleMyStore: () => void
 }): React.JSX.Element {
   const { entry, details, state } = card
   const item = details?.item
@@ -242,6 +258,14 @@ function WatchlistCard({
       </button>
 
       <div className="mt-3 flex justify-end gap-2 border-t border-surface-border pt-2">
+        <button
+          onClick={onToggleMyStore}
+          aria-pressed={entry.isInMyStore}
+          title={entry.isInMyStore ? 'Remover de "Minha Loja"' : 'Marcar como "Minha Loja"'}
+          className={`rounded-md px-2 py-1 text-sm hover:bg-surface-overlay ${entry.isInMyStore ? 'text-odin-300' : 'text-gray-500'}`}
+        >
+          🏪
+        </button>
         <button
           onClick={onTogglePause}
           title={entry.isMonitoring ? 'Pausar monitoramento' : 'Retomar monitoramento'}
