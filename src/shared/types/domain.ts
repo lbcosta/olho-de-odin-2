@@ -92,6 +92,33 @@ export interface StoreLocation {
   ypos: string
 }
 
+/** Detalhe de um item de loja (POST item — Lazy Load): cartas e encantamentos. */
+export interface StoreItemDetail {
+  svrId: number
+  itemId: number
+  itemName: string
+  itemPrice: number
+  mapId: number
+  ssi: string
+  /** Subtipo do item. */
+  itemType: string | null
+  /** Propriedades ou bônus fixos. */
+  itemOptionProperty: string | null
+  /** Encantamentos/bônus aleatórios (slots 1-4). */
+  randomOpt1: string | null
+  randomOpt2: string | null
+  randomOpt3: string | null
+  randomOpt4: string | null
+  /** Cartas (slots 1-4). */
+  slot1: string | null
+  slot2: string | null
+  slot3: string | null
+  slot4: string | null
+  hasDatabaseItem: boolean
+  databaseImgPath: string
+  databaseType: string
+}
+
 // ---------------------------------------------------------------------------
 // Entidades persistidas localmente (SQLite)
 // ---------------------------------------------------------------------------

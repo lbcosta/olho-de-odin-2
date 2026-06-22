@@ -6,6 +6,7 @@ import {
   parseActionEnvelope,
   parseActiveListings,
   parseHistoricalSummaries,
+  parseItemDetail,
   parsePriceHistory,
   parseRscValues,
   parseStoreLocation,
@@ -98,6 +99,27 @@ describe('parsePriceHistory (POST price)', () => {
     expect(history?.priceDetailDayList).toHaveLength(2)
     expect(history?.priceDetailDayList[0].itemCnt).toBe(16700)
     expect(history?.itemPriceMax).toBe(9999999)
+  })
+})
+
+describe('parseItemDetail (POST item — cartas/encantamentos)', () => {
+  const ITEM_RSC =
+    '0:{"a":"$@1","f":"","b":"x"}\n' +
+    '1:{"data":{"svrId":303,"itemId":1201,"itemName":"Espada","itemPrice":5000,"mapId":835,' +
+    '"ssi":"765","itemType":"weapon","itemOptionProperty":null,"randomOpt1":"ATK + 10",' +
+    '"randomOpt2":null,"randomOpt3":null,"randomOpt4":null,"slot1":"Carta Poring","slot2":null,' +
+    '"slot3":null,"slot4":null,"hasDatabaseItem":true,"databaseImgPath":"x","databaseType":"weapon"},' +
+    '"success":true}'
+
+  it('extrai cartas (slots) e encantamentos (randomOpt)', () => {
+    const detail = parseItemDetail(ITEM_RSC)
+    expect(detail?.slot1).toBe('Carta Poring')
+    expect(detail?.randomOpt1).toBe('ATK + 10')
+    expect(detail?.itemType).toBe('weapon')
+  })
+
+  it('retorna null para sessão inválida (sem envelope)', () => {
+    expect(parseItemDetail(FULL_PAGE_FALLBACK)).toBeNull()
   })
 })
 

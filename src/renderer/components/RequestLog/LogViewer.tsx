@@ -10,6 +10,7 @@ import type { LogColorToken } from '@shared/log'
 import { resolveLogColor } from '@shared/log'
 import type { RequestLogEntry } from '@shared/types/domain'
 import { useRequestLog } from '../../hooks/useRequestLog'
+import { useDocumentVisible } from '../../hooks/useDocumentVisible'
 import { translateLogPath } from '../../utils/LogTranslator'
 
 /** Classe de cor do texto por token semântico (alinhada aos dots do log). */
@@ -42,6 +43,9 @@ function actionLabel(entry: RequestLogEntry): string {
 export function LogViewer(): React.JSX.Element {
   const { entries, status } = useRequestLog()
   const [expanded, setExpanded] = useState(false)
+  const visible = useDocumentVisible()
+  // Minimizado => suspende a animação do spinner (preserva GPU — F5).
+  const showSpinner = status.isProcessing && visible
 
   const latest = entries[entries.length - 1]
   const collapsedLabel = status.currentAction ?? (latest ? actionLabel(latest) : 'Ocioso')
@@ -54,7 +58,7 @@ export function LogViewer(): React.JSX.Element {
         aria-expanded={expanded}
         className="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-surface-overlay"
       >
-        {status.isProcessing ? (
+        {showSpinner ? (
           <span
             aria-label="Processando"
             className="h-3 w-3 animate-spin rounded-full border-2 border-odin-400 border-t-transparent"

@@ -12,6 +12,7 @@ import type {
   QueueStatus,
   RequestLogEntry,
   ServerType,
+  StoreItemDetail,
   StoreLocation,
   StoreType,
   WatchlistEntry,
@@ -37,6 +38,7 @@ export const IpcChannel = {
   ItemGetDetails: 'item:get-details',
   ItemSync: 'item:sync',
   ItemExpandStore: 'item:expand-store',
+  ItemExpandDetail: 'item:expand-detail',
 
   // Watchlist (Fase 3)
   WatchlistList: 'watchlist:list',
@@ -180,6 +182,7 @@ export interface IpcContract {
     response: ItemDetails
   }
   [IpcChannel.ItemExpandStore]: { request: ExpandStoreRequest; response: StoreLocation }
+  [IpcChannel.ItemExpandDetail]: { request: ExpandStoreRequest; response: StoreItemDetail }
 
   [IpcChannel.WatchlistList]: { request: void; response: WatchlistEntry[] }
   [IpcChannel.WatchlistAdd]: { request: { itemId: number }; response: WatchlistEntry }
