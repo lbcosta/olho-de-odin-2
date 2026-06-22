@@ -18,6 +18,7 @@ import type {
   ActiveStoreListing,
   HistoricalSummary,
   PriceHistory,
+  StoreItemDetail,
   StoreLocation,
 } from '@shared/types/domain'
 
@@ -141,6 +142,12 @@ export function parsePriceHistory(raw: string): PriceHistory | null {
     return null
   }
   return data as unknown as PriceHistory
+}
+
+/** Detalhe do item de uma loja (POST item) — cartas/encantamentos. `null` se expirou. */
+export function parseItemDetail(raw: string): StoreItemDetail | null {
+  const data = findActionEnvelope(raw)?.data
+  return data ? (data as unknown as StoreItemDetail) : null
 }
 
 // ---------------------------------------------------------------------------

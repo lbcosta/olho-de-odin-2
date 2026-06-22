@@ -83,6 +83,7 @@ function registerMarketHandlers(market: MarketService): void {
   handle(IpcChannel.ItemGetDetails, ({ itemId }) => market.getItemDetails(itemId))
   handle(IpcChannel.ItemSync, ({ itemId, serverType }) => market.syncItem(itemId, serverType))
   handle(IpcChannel.ItemExpandStore, (request) => market.expandStore(request))
+  handle(IpcChannel.ItemExpandDetail, (request) => market.expandItemDetail(request))
 
   handle(IpcChannel.WatchlistList, () => market.listWatchlist())
   handle(IpcChannel.WatchlistAdd, ({ itemId }) => market.addToWatchlist(itemId))

@@ -5,7 +5,7 @@
 //  - Centro: Lojas Ativas (Lazy Load /navi com cópia para o clipboard).
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { ActiveStoreListing } from '@shared/types/domain'
+import type { ActiveStoreListing, StoreItemDetail } from '@shared/types/domain'
 import type { ItemDetails } from '@shared/types/ipc'
 import { formatNaviCommand } from '@shared/navi'
 import { getApi } from '../../hooks/useApi'
@@ -221,6 +221,9 @@ function Metric({ label, value }: { label: string; value: string }): React.JSX.E
 
 function StoreRow({ listing }: { listing: ActiveStoreListing }): React.JSX.Element {
   const [copying, setCopying] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [detail, setDetail] = useState<StoreItemDetail | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const { addToast } = useToast()
 
   async function copyNavi(): Promise<void> {
@@ -243,26 +246,102 @@ function StoreRow({ listing }: { listing: ActiveStoreListing }): React.JSX.Eleme
     }
   }
 
+  // Lazy Load (Item 0003): slots/encantamentos só são buscados ao expandir,
+  // uma única vez (cacheados por ssi no Main).
+  async function toggleExpand(): Promise<void> {
+    const next = !expanded
+    setExpanded(next)
+    if (!next || detail || loadingDetail) return
+    const api = getApi()
+    if (!api) return
+    setLoadingDetail(true)
+    try {
+      setDetail(
+        await api.invoke('item:expand-detail', {
+          svrId: listing.svrId,
+          mapId: listing.mapId,
+          ssi: listing.ssi,
+        }),
+      )
+    } catch {
+      addToast('Falha ao carregar slots/encantamentos.', 'error')
+      setExpanded(false)
+    } finally {
+      setLoadingDetail(false)
+    }
+  }
+
   return (
-    <li className="flex items-center justify-between rounded-lg border border-surface-border px-3 py-2 text-sm">
-      <div className="min-w-0">
-        <p className="truncate font-medium">{listing.storeName || listing.itemSellerCharName}</p>
-        <p className="truncate text-xs text-gray-400">{listing.itemSellerCharName}</p>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="text-right">
-          <p className="font-mono text-odin-300">{formatZeny(listing.itemPrice)}</p>
-          <p className="text-xs text-gray-500">{listing.itemCnt} un.</p>
+    <li className="rounded-lg border border-surface-border px-3 py-2 text-sm">
+      <div className="flex items-center justify-between">
+        <div className="min-w-0">
+          <p className="truncate font-medium">{listing.storeName || listing.itemSellerCharName}</p>
+          <p className="truncate text-xs text-gray-400">{listing.itemSellerCharName}</p>
         </div>
-        <button
-          onClick={() => void copyNavi()}
-          disabled={copying}
-          className="rounded-md border border-surface-border px-2 py-1 text-xs hover:border-odin-500 disabled:opacity-60"
-          title="Copiar /navi para o clipboard"
-        >
-          {copying ? '...' : '📋 /navi'}
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="font-mono text-odin-300">{formatZeny(listing.itemPrice)}</p>
+            <p className="text-xs text-gray-500">{listing.itemCnt} un.</p>
+          </div>
+          <button
+            onClick={() => void toggleExpand()}
+            aria-expanded={expanded}
+            className="rounded-md border border-surface-border px-2 py-1 text-xs hover:border-odin-500"
+            title="Ver slots e encantamentos"
+          >
+            {expanded ? '▾' : '▸'}
+          </button>
+          <button
+            onClick={() => void copyNavi()}
+            disabled={copying}
+            className="rounded-md border border-surface-border px-2 py-1 text-xs hover:border-odin-500 disabled:opacity-60"
+            title="Copiar /navi para o clipboard"
+          >
+            {copying ? '...' : '📋 /navi'}
+          </button>
+        </div>
       </div>
+      {expanded && (
+        <div className="mt-2 border-t border-surface-border pt-2 text-xs">
+          {loadingDetail ? (
+            <p className="text-gray-500">Carregando slots/encantamentos…</p>
+          ) : detail ? (
+            <ItemDetailView detail={detail} />
+          ) : null}
+        </div>
+      )}
     </li>
+  )
+}
+
+function ItemDetailView({ detail }: { detail: StoreItemDetail }): React.JSX.Element {
+  const isText = (s: string | null): s is string => Boolean(s)
+  const cards = [detail.slot1, detail.slot2, detail.slot3, detail.slot4].filter(isText)
+  const enchants = [
+    detail.randomOpt1,
+    detail.randomOpt2,
+    detail.randomOpt3,
+    detail.randomOpt4,
+  ].filter(isText)
+
+  if (cards.length === 0 && enchants.length === 0) {
+    return <p className="text-gray-500">Sem cartas ou encantamentos.</p>
+  }
+
+  return (
+    <div className="space-y-1">
+      {cards.length > 0 && (
+        <p>
+          <span className="text-gray-500">Cartas:</span>{' '}
+          <span className="text-gray-200">{cards.join(', ')}</span>
+        </p>
+      )}
+      {enchants.length > 0 && (
+        <p>
+          <span className="text-gray-500">Encantamentos:</span>{' '}
+          <span className="text-gray-200">{enchants.join(', ')}</span>
+        </p>
+      )}
+    </div>
   )
 }

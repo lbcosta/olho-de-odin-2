@@ -9,6 +9,7 @@ import type {
   PriceHistory,
   RequestPriority,
   ServerType,
+  StoreItemDetail,
   StoreLocation,
   StoreType,
   WatchlistEntry,
@@ -21,6 +22,7 @@ import type {
 } from '@shared/types/ipc'
 import { GnJoyClient, GnJoyError } from '../gnjoy/GnJoyClient'
 import {
+  itemDetailEndpoint,
   priceHistoryEndpoint,
   searchActiveEndpoint,
   searchHistoryEndpoint,
@@ -29,6 +31,7 @@ import {
 import {
   parseActiveListings,
   parseHistoricalSummaries,
+  parseItemDetail,
   parsePriceHistory,
   parseStoreLocation,
 } from '../gnjoy/parser'
@@ -45,6 +48,7 @@ interface ItemCacheEntry {
 
 const itemKey = (itemId: number): string => `item:${itemId}`
 const storeKey = (ssi: string): string => `store:${ssi}`
+const itemDetailKey = (ssi: string): string => `itemdetail:${ssi}`
 
 export class MarketService {
   constructor(
@@ -159,6 +163,19 @@ export class MarketService {
     this.cache.set(storeKey(req.ssi), loc)
     this.cache.setStoreLocation(loc)
     return loc
+  }
+
+  /** Detalhe do item de uma loja (Lazy Load: cartas/encantamentos), com cache por ssi. */
+  async expandItemDetail(req: ExpandStoreRequest): Promise<StoreItemDetail> {
+    const cached = this.cache.get<StoreItemDetail>(itemDetailKey(req.ssi))
+    if (cached) return cached.value
+
+    const raw = await this.client.post(itemDetailEndpoint(req), 'HIGH')
+    const detail = parseItemDetail(raw)
+    if (!detail) throw new GnJoyError('Detalhe do item não encontrado.')
+
+    this.cache.set(itemDetailKey(req.ssi), detail)
+    return detail
   }
 
   computeMetrics(itemId: number): MarketAnalysis {
