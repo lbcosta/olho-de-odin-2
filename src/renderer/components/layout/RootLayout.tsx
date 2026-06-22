@@ -4,6 +4,7 @@
 
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { useNavigation } from '../../contexts/NavigationContext'
+import { useStoreAlerts } from '../../hooks/useStoreAlerts'
 import { SearchBar } from '../Search/SearchBar'
 import { LogViewer } from '../RequestLog/LogViewer'
 import { ToastContainer } from '../ui/Toast'
@@ -13,6 +14,7 @@ import { ProfileManager } from '../Profile/ProfileManager'
 
 export function RootLayout(): React.JSX.Element {
   const { view, navigate } = useNavigation()
+  useStoreAlerts() // toasts in-app de Venda/DC da "Minha Loja" (quando em foco)
 
   return (
     <div className="flex h-full flex-col">

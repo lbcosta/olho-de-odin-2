@@ -123,6 +123,7 @@ export class MarketService {
   async syncItem(
     itemId: number,
     serverType: ServerType,
+    priority: RequestPriority = 'HIGH',
     storeType: StoreType = MARKET_STORE_TYPE,
   ): Promise<ItemDetails> {
     const item = this.profiles.getItem(itemId)
@@ -130,14 +131,14 @@ export class MarketService {
 
     const raw = await this.client.get(
       searchActiveEndpoint({ searchWord: item.name, serverType, storeType }),
-      'HIGH',
+      priority,
     )
     const listings = parseActiveListings(raw).filter((l) => l.itemId === itemId)
 
     let history: PriceHistory | null = null
     const svrId = listings[0]?.svrId
     if (svrId !== undefined) {
-      const priceRaw = await this.client.post(priceHistoryEndpoint({ itemId, svrId }), 'HIGH')
+      const priceRaw = await this.client.post(priceHistoryEndpoint({ itemId, svrId }), priority)
       history = parsePriceHistory(priceRaw)
     }
 

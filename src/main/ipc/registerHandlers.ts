@@ -13,6 +13,7 @@ import { MarketService } from '../services/market/MarketService'
 import { StoreTracker } from '../services/store/StoreTracker'
 import { WatchlistMonitor } from '../services/watchlist/WatchlistMonitor'
 import { sendOsNotification } from '../notifications'
+import { makeHybridNotifier } from '../services/store/hybridNotifier'
 import { broadcast } from './broadcast'
 import { handle } from './handle'
 
@@ -121,10 +122,20 @@ export function registerIpcHandlers(): RegisteredServices {
   const queue = RequestQueueManager.getInstance()
   const client = new GnJoyClient(queue)
   const market = new MarketService(client, cache, profiles)
-  const storeTracker = new StoreTracker(profiles, sendOsNotification)
+  // Notificação híbrida (F4): janela em foco => toast in-app via push;
+  // minimizada/fora de foco => Notificação nativa do SO.
+  const notify = makeHybridNotifier({
+    isAppFocused: () => {
+      const win = BrowserWindow.getFocusedWindow()
+      return win !== null && !win.isMinimized()
+    },
+    toast: (alert) => broadcast(IpcEvent.StoreAlert, alert),
+    osNotify: sendOsNotification,
+  })
+  const storeTracker = new StoreTracker(profiles, notify)
   const watchlistMonitor = new WatchlistMonitor(
     profiles,
-    (itemId, serverType) => market.syncItem(itemId, serverType),
+    (itemId, serverType, priority) => market.syncItem(itemId, serverType, priority),
     storeTracker,
     (itemId, state, details) => broadcast(IpcEvent.WatchlistCard, { itemId, state, details }),
   )
